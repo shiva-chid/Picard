@@ -23,8 +23,76 @@ function gassman_dist(H,G : CCs := [], classfunc:=func<x|1>);
     return newdist;
 end function;
 
+function uptoGconjugacy(G,ZK);
+    l := #BaseRing(G);
+    ZKtrue := [];
+    for i := 1 to #ZK do
+        KK := ZK[i]`subgroup;
+        KKord := ZK[i]`order;
+        boo := false;
+        ZKtrue_sub := [x : x in ZKtrue | x`order eq KKord];
+        for j := 1 to #ZKtrue_sub do
+            if IsConjugate(G,KK,ZKtrue_sub[j]`subgroup) then
+                boo := true;
+                break;
+            end if;
+        end for;
+        if not boo then
+            Append(~ZKtrue,ZK[i]);
+        end if;
+        if i mod 100 eq 0 then
+            printf "Checked %o out of %o subgroups for conjugacy in G = GSp(6,%o)...\n", i, #ZK, l;
+        end if;
+    end for;
+    printf "%o out of %o subgroups are distinct upto G-conjugacy where G = GSp(6,%o)\n\n", #ZKtrue, #ZK, l;
+    return ZKtrue;
+end function;
+
+function subs_of_maxsub(G,H,K,ZH,maptoGl,l);
+    KinGl := maptoGl(K);
+    M := GModule(KinGl);
+/*
+    M := GModule(ChangeRing(K,GF(l)));
+    SM := Submodules(M);
+*/
+    n := Index(H,K);
+/*
+    Ul, il := UnitGroup(Integers(l));
+*/
+    Ul, il := UnitGroup(GF(l));
+    det := hom<H -> Ul | [Determinant(Submatrix(h,[1..3],[1..3]))@@il : h in Generators(H)]>;
+/*
+    if 1 in [Dimension(x) : x in SM] then //Borel case
+        assert n eq l^2+l+1;
+        ZK := [x : x in ZH | 1 in [Dimension(y) : y in Submodules(GModule(ChangeRing(x`subgroup,GF(l))))]];
+        printf "This maximal subgroup has %o subgroups upto conjugacy in G = GSp(6,%o)\n\n", #ZK, l;
+        return ZK;
+*/
+    if not IsIrreducible(M) then
+        assert n eq l^2+l+1;
+        ZK := [x : x in ZH | not IsIrreducible(GModule(maptoGl(x`subgroup)))];
+        printf "%o subgroups of this maximal subgroup have been found\nChecking for conjugacy in G = GSp(6,%o)...\n", #ZK, l;
+        return uptoGconjugacy(G,ZK);
+    elif IsPrime(n) and (l-1) mod n eq 0 then
+        return [];
+/*
+        detK := det(K);
+        if detK ne Ul then
+            assert detK eq n*Ul;
+            ZK := [x : x in ZH | det(x`subgroup) subset detK];
+            printf "%o subgroups of this maximal subgroup have been found\nChecking for conjugacy in G = GSp(6,%o)...\n", #ZK, l;
+            return uptoGconjugacy(G,ZK);
+        end if;
+*/
+    else
+        ZK := Subgroups(K);
+        printf "This maximal subgroup has %o subgroups upto conjugacy in it\nChecking for conjugacy in G = GSp(6,%o)...\n", #ZK, l;
+        return uptoGconjugacy(G,ZK);
+    end if;
+end function;
 
 function precomputation_splitcase(l);
+/*
     Fl := Integers(l);
     G := GSp(6,l);
     SG := Symp(6,l);
@@ -37,29 +105,66 @@ function precomputation_splitcase(l);
     H := Conjugate(H,permmat^-1);
     H := sub<G | H>;
     assert #H eq #GL(3,Fl);
+*/
+
+    Fl := GF(l);
+/*
+    G := GSp(6,l);
+*/
+    G := CSp(6,l);
+/*
+    SG := Symp(6,l);
+*/
+    Gl := GL(3,Fl);
+    zeromat := ZeroMatrix(Fl,3);
+    idmat := IdentityMatrix(Fl,3);
+    antidiagidmat := Matrix(Fl,3,3,[[i+j eq 4 select 1 else 0 : j in [1..3]] : i in [1..3]]);
+    permmat := GL(6,Fl) ! DirectSum(idmat,antidiagidmat);
+    GlinjH := hom<Gl -> G |[permmat*BlockMatrix(2,2,[a,zeromat,zeromat,Transpose(a^-1)])*permmat^-1 : a in Generators(Gl)]>;
+    assert #Kernel(GlinjH) eq 1;
+    H := GlinjH(Gl);
+    assert #H eq #Gl;
+    maptoGl := Inverse(GlinjH);
 
     MH := MaximalSubgroups(H);
-    MHtrue := [];
-    for i := 1 to #MH do
-        K := MH[i]`subgroup;
+    printf "There are %o maximal subgroups of GL(3,F_%o) upto conjugacy in it\n", #MH, l;
+    MHtrue := uptoGconjugacy(G,MH);
+    printf "There are %o maximal subgroups of GL(3,F_%o) upto conjugacy in G = GSp(6,%o)\n", #MHtrue, l, l;
+    printf "Their orders and index in GL(3,F_%o) are:\n", l;
+    printf "%o\n", [<x`order,#H/x`order> : x in MHtrue];
+
+    ZHinitial := Subgroups(H);
+    printf "There are %o subgroups of GL(3,F_%o) upto conjugacy in it\n", #ZHinitial, l;
+/*
+    ZHs := [];
+    for i := 1 to #ZHinitial do
+        K := ZHinitial[i]`subgroup;
+        Kord := ZHinitial[i]`order;
         boo := false;
-        for j := 1 to #MHtrue do
-            if IsConjugate(G,K,MHtrue[j]`subgroup) then
+        ZHs_sub := [x : x in ZHs | x`order eq Kord];
+        for j := 1 to #ZHs_sub do
+            if IsConjugate(G,K,ZHs_sub[j]`subgroup) then
                 boo := true;
                 break;
             end if;
         end for;
         if not boo then
-            Append(~MHtrue,MH[i]);
+            Append(~ZHs,ZHinitial[i]);
         end if;
-        if i mod 10 eq 0 then
-            printf "Checked the first %o maximal subgroups of GL(3,F_%o) for conjugacy in G...\n", i, l;
+        if i mod 100 eq 0 then
+            printf "Checked the first %o subgroups of GL(3,F_%o) for conjugacy in G = GSp(6,%o)...\n", i, l, l;
         end if;
     end for;
-    printf "There are %o maximal subgroups of GL(3,F_%o) upto conjugacy in G\n", #MHtrue, l;
-    printf "Their orders and index in GL(3,F_%o) are:\n", l;
-    printf "%o\n", [<x`order,#H/x`order> : x in MHtrue];
+*/
+/*
+    ZHs := uptoGconjugacy(G,ZHinitial);
+    printf "There are %o subgroups of GL(3,%o) upto conjugacy in G = GSp(6,%o)\n", #ZHs, l, l;
+*/
+    ZHs := ZHinitial;
+    printf "Working using these %o subgroups of GL(3,%o), which are not necessarily distinct upto G-conjugacy, where G = GSp(6,%o).\n\n", #ZHs, l, l;
+    ZHtrues := [subs_of_maxsub(G,H,K`subgroup,ZHs,maptoGl,l) : K in MHtrue];
 
+/*
     ZHs := [];
     ZHtrues := [];
     for i := 1 to #MHtrue do
@@ -70,9 +175,11 @@ function precomputation_splitcase(l);
         ZKtrue := [];
         for j := 1 to #ZK do
             KK := ZK[j]`subgroup;
+            KKord := ZK[j]`order;
             boo := false;
-            for k := 1 to #ZKtrue do
-                if IsConjugate(G,KK,ZKtrue[k]`subgroup) then
+            ZKtrue_sub := [x : x in ZKtrue | x`order eq KKord];
+            for k := 1 to #ZKtrue_sub do
+                if IsConjugate(G,KK,ZKtrue_sub[k]`subgroup) then
                     boo := true;
                     break;
                 end if;
@@ -87,6 +194,52 @@ function precomputation_splitcase(l);
         printf "The %ost maximal subgroup has %o subgroups upto conjugacy in G\n\n", i, #ZKtrue;
         Append(~ZHtrues,ZKtrue);
     end for;
+*/
+
+/*
+    ZHinitial := Subgroups(H);
+    printf "There are %o subgroups of GL(3,F_%o)\n", #ZHinitial, l;
+    ZHs := [];
+    for i := 1 to #ZHinitial do
+        K := ZHinitial[i]`subgroup;
+        boo := false;
+        for j := 1 to #ZHs do
+            if IsConjugate(G,K,ZHs[j]`subgroup) then
+                boo := true;
+                break;
+            end if;
+        end for;
+        if not boo then
+            Append(~ZHs,ZHinitial[i]);
+        end if;
+        if i mod 100 eq 0 then
+            printf "Checked the first %o subgroups of GL(3,F_%o) for conjugacy in G = GSp(6,%o)...\n", i, l, l;
+        end if;
+    end for;
+    printf "There are %o subgroups of GL(3,%o) upto conjugacy in G = GSp(6,%o)\n", #ZHs, l, l;
+    MHconjs := [Conjugates(H,K`subgroup) : K in MHtrue];
+    ZHtrues := [[] : i in [1..#MHtrue]];
+    for i := 1 to #ZHs do
+        K := ZHs[i]`subgroup;
+        if K eq H then
+            continue;
+        end if;
+        for j := 1 to #MHconjs do
+            if MHtrue[j]`order mod ZHs[i]`order eq 0 then
+                for KK in MHconjs[j] do
+                    if K subset KK then
+                        Append(~ZHtrues[j],ZHs[i]);
+                        break;
+                    end if;
+                end for;
+            end if;
+        end for;
+        if i mod 100 eq 0 then
+            printf "Found the maximal subgroups of GL(3,F_%o) containing a given subgroup, for each of the first %o subgroups of GL(3,F_%o)\n", l, i, l;
+        end if;
+    end for;
+    printf "According to the maximal subgroups in which they are contained, the numbers of subgroups are %o\n", [#x : x in ZHtrues];
+*/
 
     CCs := ConjugacyClasses(G);
     class := ClassMap(G);
@@ -184,9 +337,9 @@ function precomputation_splitcase(l);
             for k := 1 to #subs do
                 K := subs[k]`subgroup;
                 bool := true;
-                for l := 1 to #temp do
-                    if IsConjugate(GL(6,Fl),K,temp[l,1]`subgroup) then
-                        temp[l] := temp[l] cat [subs[k]];
+                for ll := 1 to #temp do
+                    if IsConjugate(GL(6,Fl),K,temp[ll,1]`subgroup) then
+                        temp[ll] := temp[ll] cat [subs[k]];
                         bool := false;
                         break;
                     end if;
@@ -209,9 +362,9 @@ function precomputation_splitcase(l);
             for k := 1 to #subs do
                 K := subs[k]`subgroup;
                 bool := true;
-                for l := 1 to #temp do
-                    if IsConjugate(GL(6,Fl),K,temp[l,1]`subgroup) then
-                        temp[l] := temp[l] cat [subs[k]];
+                for ll := 1 to #temp do
+                    if IsConjugate(GL(6,Fl),K,temp[ll,1]`subgroup) then
+                        temp[ll] := temp[ll] cat [subs[k]];
                         bool := false;
                         break;
                     end if;
