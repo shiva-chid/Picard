@@ -23,6 +23,58 @@ function gassman_dist(H,G : CCs := [], classfunc:=func<x|1>);
     return newdist;
 end function;
 
+function charpol_dist(H,G : CCs := [], charpols := []);
+    if charpols ne [] then
+        if H eq G then
+            return [charpols[i,2]/#G : i in [1..#charpols]];
+        end if;
+        newdist := [0 : j in [1..#charpols]];
+        CCH := ConjugacyClasses(H);
+        for x in CCH do
+            n := Index(charpols,CharacteristicPolynomial(x[3]));
+            newdist[n] +:= x[2];
+        end for;
+        newdist := [x/#H : x in newdist];
+        return newdist;
+    end if;
+
+    if CCs eq [] then
+        CCs := ConjugacyClasses(G);
+    end if;
+
+    charpols := [];
+    charpolnumbers := [];
+    for i := 1 to #CCs do
+        x := CCs[i,3];
+        f := CharacteristicPolynomial(x);
+        if not f in charpols then
+            Append(~charpols,f);
+            Append(~charpolnumbers,CCs[i,2]);
+        else
+            n := Index(charpols,f);
+            charpolnumbers[n] := charpolnumbers[n]+CCs[i,2];
+        end if;
+    end for;
+
+    if H eq G then
+        return [x/#G : x in charpolnumbers];
+    end if;
+    /*
+    if #H gt 2000 then
+        return [#(Set(H) meet Orbit(G,CCs[i][3]))/#H : i in [1..#CCs]];
+    end if;
+    */
+    newdist := [0 : j in [1..#charpols]];
+    CCH := ConjugacyClasses(H);
+    for x in CCH do
+        n := Index(charpols,CharacteristicPolynomial(x[3]));
+        newdist[n] +:= x[2];
+    end for;
+    newdist := [x/#H : x in newdist];
+    return newdist;
+end function;
+
+
 function uptoGconjugacy(G,ZK);
     l := #BaseRing(G);
     ZKtrue := [];
@@ -243,18 +295,23 @@ function precomputation_splitcase(l);
 
     CCs := ConjugacyClasses(G);
     class := ClassMap(G);
-    charpols := [];
+    charpolys := [];
+    charpolynumbers := [];
     cctocharpol := [];
     for i := 1 to #CCs do
         x := CCs[i,3];
         f := CharacteristicPolynomial(x);
-        if not f in charpols then
-            Append(~charpols,f);
-            Append(~cctocharpol,#charpols);
+        if not f in charpolys then
+            Append(~charpolys,f);
+            Append(~charpolynumbers,CCs[i,2]);
+            Append(~cctocharpol,#charpolys);
         else
-            Append(~cctocharpol,Index(charpols,f));
+            n := Index(charpolys,f);
+            charpolynumbers[n] := charpolynumbers[n] + CCs[i,2];
+            Append(~cctocharpol,n);
         end if;
     end for;
+    charpols := [<charpolys[i],charpolynumbers[i]> : i in [1..#charpolys]];
     printf "There are %o conjugacy classes in GSp(6,F_%o), which give %o distinct characteristic polynomials\n\n", #CCs, l, #charpols;
 
     ccstats := [];
