@@ -30,8 +30,9 @@ function charpol_dist(H,G : CCs := [], charpols := []);
         end if;
         newdist := [0 : j in [1..#charpols]];
         CCH := ConjugacyClasses(H);
+        charpolys := [x[1] : x in charpols];
         for x in CCH do
-            n := Index(charpols,CharacteristicPolynomial(x[3]));
+            n := Index(charpolys,CharacteristicPolynomial(x[3]));
             newdist[n] +:= x[2];
         end for;
         newdist := [x/#H : x in newdist];

@@ -26,6 +26,58 @@ function getLpols(f, primesstart, primesend);
     return Lpols;
 end function;
 
+function charpol_dist(H,G : CCs := [], charpols := []);
+    if charpols ne [] then
+        if H eq G then
+            return [charpols[i,2]/#G : i in [1..#charpols]];
+        end if;
+        newdist := [0 : j in [1..#charpols]];
+        CCH := ConjugacyClasses(H);
+        charpolys := [x[1] : x in charpols];
+        for x in CCH do
+            n := Index(charpolys,CharacteristicPolynomial(x[3]));
+            newdist[n] +:= x[2];
+        end for;
+        newdist := [x/#H : x in newdist];
+        return newdist;
+    end if;
+
+    if CCs eq [] then
+        CCs := ConjugacyClasses(G);
+    end if;
+
+    charpols := [];
+    charpolnumbers := [];
+    for i := 1 to #CCs do
+        x := CCs[i,3];
+        f := CharacteristicPolynomial(x);
+        if not f in charpols then
+            Append(~charpols,f);
+            Append(~charpolnumbers,CCs[i,2]);
+        else
+            n := Index(charpols,f);
+            charpolnumbers[n] := charpolnumbers[n]+CCs[i,2];
+        end if;
+    end for;
+
+    if H eq G then
+        return [x/#G : x in charpolnumbers];
+    end if;
+    /*
+    if #H gt 2000 then
+        return [#(Set(H) meet Orbit(G,CCs[i][3]))/#H : i in [1..#CCs]];
+    end if;
+    */
+    newdist := [0 : j in [1..#charpols]];
+    CCH := ConjugacyClasses(H);
+    for x in CCH do
+        n := Index(charpols,CharacteristicPolynomial(x[3]));
+        newdist[n] +:= x[2];
+    end for;
+    newdist := [x/#H : x in newdist];
+    return newdist;
+end function;
+
 function allvalidcharpols(sig);
     return [i : i in [1..#sig] | sig[i] ne 0];
 end function;
@@ -39,7 +91,7 @@ Attach("GSp.m");
 G := GSp(6,7);
 */
 G := CSp(6,7);
-load "all_data_7.txt";
+load "new_data_7.txt";
 
 function find_image(f, possibs, possible_charpolstats : primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
     Z := Integers();
@@ -50,7 +102,7 @@ function find_image(f, possibs, possible_charpolstats : primesstart := 3, primes
     charpolsshowingup := [];
     skipfrobdistcalc := false;
     for i := 1 to #Lpols do
-        if Lpols[i,1] mod 7 ne 1 then
+        if Lpols[i,1] mod 3 ne 1 or Lpols[i,1] mod 7 ne 1 then
             continue;
         end if;
 	    charpol := P7 ! Reverse(Lpols[i,2]);
@@ -65,6 +117,10 @@ function find_image(f, possibs, possible_charpolstats : primesstart := 3, primes
             if #possibs eq 1 then
                 skipfrobdistcalc := true;
                 possibilities := possibs;
+                break;
+            elif #possibs eq 0 then
+                skipfrobdistcalc := true;
+                possibilities := [];
                 break;
             end if;
 	    end if;
@@ -129,7 +185,7 @@ function find_image(f, possibs, possible_charpolstats : primesstart := 3, primes
     end if;
 end function;
 
-function lifttoQ(f, K, H, G, CCs, charpols, l : possibs := [], possible_charpolstats := [], primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
+function lifttoQzeta3(f, K, H, G, CCs, charpols, l : possibs := [], possible_charpolstats := [], primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
     charpolys := [x[1] : x in charpols];
     Fl := GF(l);
     Ul, il := UnitGroup(Fl);
@@ -191,7 +247,7 @@ function lifttoQ(f, K, H, G, CCs, charpols, l : possibs := [], possible_charpols
     charpolsshowingup := [];
     skipcharpoldistcalc := false;
     for i := 1 to #Lpols do
-        if Lpols[i,1] mod l eq 1 then
+        if Lpols[i,1] mod 3 ne 1 or Lpols[i,1] mod l eq 1 then
             continue;
         end if;
 	    charpol := P7 ! Reverse(Lpols[i,2]);
@@ -206,6 +262,10 @@ function lifttoQ(f, K, H, G, CCs, charpols, l : possibs := [], possible_charpols
             if #possibs eq 1 then
                 skipcharpoldistcalc := true;
                 possibilities := possibs;
+                break;
+            elif #possibs eq 0 then
+                skipcharpoldistcalc := true;
+                possibilities := [];
                 break;
             end if;
 	    end if;
@@ -258,7 +318,7 @@ function lifttoQ(f, K, H, G, CCs, charpols, l : possibs := [], possible_charpols
         print "More primes need to be sampled. Sampling more primes...";
         newprimesstart := primesend + 1;
         newprimesend := primesend + 1000;
-        return lifttoQ(f, K, H, G, CCs, charpols, l : possibs := possibs, possible_charpolstats := possible_charpolstats, primesstart := newprimesstart, primesend := newprimesend, list_of_counts := list_of_counts);
+        return lifttoQzeta3(f, K, H, G, CCs, charpols, l : possibs := possibs, possible_charpolstats := possible_charpolstats, primesstart := newprimesstart, primesend := newprimesend, list_of_counts := list_of_counts);
     elif #possibilities[1] gt 1 then
         print "Sampled data about frobenius charpols cannot distinguish the image upto GL conjugacy uniquely.";
         print "The image could be one of the following subgroups:";
@@ -274,11 +334,15 @@ Z := Integers();
 P<x> := PolynomialRing(Z);
 f := x^4+x^2+1;
 for i := 1 to 4 do
-    mod7img_overQzeta7 := find_image(f,subs_with_charpolstat_GLconjinfo[i],all_charpolstats[i]);
-    if mod7img_overQzeta7 ne [] then
-        if #mod7img_overQzeta7 eq 1 then
-            mod7img := lifttoQ(f, mod7img_overQzeta7[1]`subgroup,H,G,CCs,charpols,7);
-            print mod7img;
+    mod7img_overQzeta21 := find_image(f,subs_with_charpolstat_GLconjinfo[i],all_charpolstats[i]);
+    if mod7img_overQzeta21 ne [] then
+        if #mod7img_overQzeta21 eq 1 then
+            K := mod7img_overQzeta21[1]`subgroup;
+            if BaseRing(K) eq Integers(7) then
+                K := ChangeRing(K,GF(7));
+            end if;
+            mod7img_overQzeta3 := lifttoQzeta3(f,K,H,G,CCs,charpols,7);
+            print mod7img_overQzeta3;
         end if;
     end if;
 end for;
