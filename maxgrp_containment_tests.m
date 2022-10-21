@@ -133,7 +133,7 @@ function C3test(f,cond : primes_bound := 100);
         end for;
         possibly_nonsurj_primes := Sort(SetToSequence(Set(possibly_nonsurj_primes cat PrimeFactors(bignum))));
     end for;
-    return [p : p in possibly_nonsurj_primes | p mod 3 eq 1];
+    return [ell : ell in possibly_nonsurj_primes | ell mod 3 eq 1];
 end function;
 
 
@@ -163,7 +163,7 @@ function C2test(f,cond : primes_bound := 100);
         end for;
         possibly_nonsurj_primes := Sort(SetToSequence(Set(possibly_nonsurj_primes cat PrimeFactors(bignum))));
     end for;
-    return [p : p in possibly_nonsurj_primes | p mod 3 eq 1];
+    return [ell : ell in possibly_nonsurj_primes | ell mod 3 eq 1];
 end function;
 
 
