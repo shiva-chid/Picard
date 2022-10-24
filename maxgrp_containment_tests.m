@@ -33,6 +33,7 @@ end function;
 
 function C1test(f,cond);
     E := EllipticCurve([0,1]);
+/*
     good_ps := [];
     k := 1;
     while #good_ps lt 5 do
@@ -40,15 +41,54 @@ function C1test(f,cond);
         if IsPrime(p) then
             a_p := TraceOfFrobenius(E,p);
             if a_p mod cond eq 2 then
-/*
-The checks p = 1 mod N and a_p = 2 mod N imply that Frob_p on E[N] is unipotent.
-The further condition p = 1 mod 3 is enought to guarantee that Frob_p on E[N] is the identity.
-*/
+// The checks p = 1 mod N and a_p = 2 mod N imply that Frob_p on E[N] is unipotent. It is not clear how to make it the identity on E[N]
+// But we do not necessarily need to make Frob_p equal identity on E[N]. We only need it to be identity in RayClassGroup of conductor N. We follow that approach below.
                 Append(~good_ps,p);
             end if;
         end if;
         k := k+1;
     end while;
+*/
+
+    F := CyclotomicField(3);
+    O := RingOfIntegers(F);
+/*
+    cond_sqfree, cond_eps_multiple := Squarefree(cond);
+    print cond_sqfree, cond_eps_multiple;
+*/
+
+    cond_eps_multiple := cond;
+
+    good_ps := [];
+    k := 1;
+    while #good_ps lt 5 do
+        p := 1+k*3*cond_eps_multiple;
+        if IsPrime(p) then
+            Facp := Factorisation(p*O);
+            boo, p1 := IsPrincipal(Facp[1,1]);
+            if exists(t){u*p1 : u in [1,-1,O.2,O.2^2,-O.2,-O.2^2] | u*p1-1 in cond_eps_multiple*O} then
+            	print p, TraceOfFrobenius(E,p);
+                Append(~good_ps,p);
+            end if;
+        end if;
+        k := k+1;
+    end while;
+
+/*
+    F := CyclotomicField(3);
+    O := RingOfIntegers(F);
+    H := HeckeCharacterGroup(cond*O);
+    primes1modconductor := [];
+    k := 1;
+    while #primes1modconductor lt 100 do
+        p := 1+k*3*cond;
+        if IsPrime(p) then
+            Append(~primes1modconductor,p);
+        end if;
+        k := k+1;
+    end while;
+*/
+    
 
     charpols_frobp := [getLpol(f,p) : p in good_ps];
     print good_ps, charpols_frobp;
@@ -56,7 +96,10 @@ The further condition p = 1 mod 3 is enought to guarantee that Frob_p on E[N] is
 /*
     require &and[good_ps[i]^3 eq Coefficient(charpols_frobp[i],0) : i in [1..#charpols_frobp]] : "Something went wrong in computation of L-polynomial";
 */
-    bignum := GCD([Evaluate(charpol,1) : charpol in charpols_frobp]);
+    Values_of_charpols_at_1 := [Evaluate(charpol,1) : charpol in charpols_frobp];
+    Values_of_charpols_at_p := [Evaluate(charpols_frobp[i],good_ps[i]) : i in [1..#good_ps]];
+    print Values_of_charpols_at_1, Values_of_charpols_at_p;
+    bignum := GCD(Values_of_charpols_at_1);
     if bignum eq 0 then
         return "The charpol(rho_ell(Frob_p)) evaluated at 1 equals 0, for the five chosen primes p.";
     end if;
@@ -167,36 +210,46 @@ function C2test(f,cond : primes_bound := 100);
 end function;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function PicardConductor(f);
+    cmd := Sprintf("\"from sage.all import QQ, PolynomialRing; from picard_curves import PicardCurve; R = PolynomialRing(QQ,'x'); print(PicardCurve(R(%o)).cond)\"", Coefficients(f));
+    val := Pipe("cd picard_curves\n sage -python -c " cat cmd, "");
+    val := Split(val,"[(,)] \n");
+    val := [StringToInteger(x) : x in val];
+    assert #val mod 2 eq 0;
+    return &*[val[2*i-1]^val[2*i] : i in [1..ExactQuotient(#val,2)]];
+end function;
+
 P<x> := PolynomialRing(Integers());
-AttachSpec("magma/spec");
+
+f := x^4-1;
+cond := PicardConductor(f);
+print cond, Factorisation(cond);
+C1test(f,cond);
+// C1test_v2(f,cond);
+C3test(f,cond);
+C2test(f,cond);
+
 
 f := x^4+x^2+1;
-discf := Discriminant(f);
-f_Q := ChangeRing(f,Rationals());
-cond_multiple := AbsoluteValue(QuarticDiscriminant(LongWeierstrassEquation(f_Q)));
-// cond_multiple := AbsoluteValue(QuarticDiscriminant(ShortWeierstrassEquation(f_Q)));
-// cond_multiple := AbsoluteValue(QuarticDiscriminant(PicardForm(ReducedWeierstrassEquation(f_Q))));
-print cond_multiple, discf;
-print cond_multiple mod discf eq 0;
+cond := PicardConductor(f);
+print cond, Factorisation(cond);
+C1test(f,cond);
+// C1test_v2(f,cond);
+C3test(f,cond);
+C2test(f,cond);
 
-C1test(f,cond_multiple);
-// C1test_v2(f,cond_multiple);
-C3test(f,cond_multiple);
-C2test(f,cond_multiple);
 
 f := x^4 - 4*x^3 + 2*x^2 + x + 13;
-discf := Discriminant(f);
-f_Q := ChangeRing(f,Rationals());
-cond_multiple := AbsoluteValue(QuarticDiscriminant(LongWeierstrassEquation(f_Q)));
-// cond_multiple := AbsoluteValue(QuarticDiscriminant(ShortWeierstrassEquation(f_Q)));
-// cond_multiple := AbsoluteValue(QuarticDiscriminant(PicardForm(ReducedWeierstrassEquation(f_Q))));
-print cond_multiple, discf;
-print cond_multiple mod discf eq 0;
-
-C1test(f,cond_multiple);
-// C1test_v2(f,cond_multiple);
-C3test(f,cond_multiple);
-C2test(f,cond_multiple);
+cond := PicardConductor(f);
+print cond, Factorisation(cond);
+C1test(f,cond);
+// C1test_v2(f,cond);
+C3test(f,cond);
+C2test(f,cond);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
