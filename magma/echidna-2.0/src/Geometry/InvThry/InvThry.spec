@@ -1,3 +1,0 @@
-{
-  transvectant.m
-}
