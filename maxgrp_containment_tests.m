@@ -1,15 +1,13 @@
 load "Lpolys.m";
 load "quad_cubic_fields.m";
 
-function getLpol(f,p);
+function getLpol(f,cond,p);
     P<x> := Parent(f);
-    disc := Discriminant(f);
-    disc := Numerator(disc)*Denominator(disc);
-    if disc mod p eq 0 then
+    if cond mod p eq 0 then
         return "Bad Prime";
     end if;
 /*
-    require disc mod p ne 0 : "Bad Prime";
+    require cond mod p ne 0 : "Bad Prime";
 */
     pstr := IntegerToString(p);
     fcoeffs := [IntegerToString(c) : c in Coefficients(f)];
@@ -90,7 +88,7 @@ function C1test(f,cond);
 */
     
 
-    charpols_frobp := [getLpol(f,p) : p in good_ps];
+    charpols_frobp := [getLpol(f,cond,p) : p in good_ps];
     print good_ps, charpols_frobp;
     assert &and[good_ps[i]^3 eq Coefficient(charpols_frobp[i],0) : i in [1..#charpols_frobp]];
 /*
@@ -141,7 +139,7 @@ function C1test_v2(f,cond : primes_bound := 100);
     bignum := 0;
     for p in PrimesUpTo(primes_bound) do
         if p ge 53 and p mod 3 eq 1 and disc mod p ne 0 then
-            Lpol := getLpol(f,p);
+            Lpol := getLpol(f,cond,p);
             bignum := GCD(bignum,Resultant(Lpol,x^e-1));
         end if;
     end for;
@@ -168,7 +166,7 @@ function C3test(f,cond : primes_bound := 100);
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
             if p ne 2 and chi(p) ne 1 then
-                Lpol := getLpol(f,p);
+                Lpol := getLpol(f,cond,p);
                 if Type(Lpol) ne MonStgElt then
                     bignum := GCD(bignum,Coefficient(Lpol,5));
                 end if;
@@ -192,7 +190,7 @@ function C2test(f,cond : primes_bound := 100);
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
             if p ne 2 and LegendreSymbol(d,p) eq -1 then
-                Lpol := getLpol(f,p);
+                Lpol := getLpol(f,cond,p);
                 if Type(Lpol) ne MonStgElt then
                     facs := Factorisation(Lpol);
                     if #facs eq 2 and facs[1,2] eq 1 and facs[2,2] eq 1 then
@@ -213,15 +211,7 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-function PicardConductor(f);
-    cmd := Sprintf("\"from sage.all import QQ, PolynomialRing; from picard_curves import PicardCurve; R = PolynomialRing(QQ,'x'); print(PicardCurve(R(%o)).cond)\"", Coefficients(f));
-    val := Pipe("cd picard_curves\n sage -python -c " cat cmd, "");
-    val := Split(val,"[(,)] \n");
-    val := [StringToInteger(x) : x in val];
-    assert #val mod 2 eq 0;
-    return &*[val[2*i-1]^val[2*i] : i in [1..ExactQuotient(#val,2)]];
-end function;
+load "PicardConductor.m";
 
 P<x> := PolynomialRing(Integers());
 

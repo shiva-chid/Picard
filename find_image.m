@@ -1,13 +1,21 @@
 load "Lpolys.m";
+load "PicardConductor.m";
 
-function getLpols(f, primesstart, primesend);
+function getLpols(f, cond, primesstart, primesend);
     P<x> := Parent(f);
-    disc := Discriminant(f);
+/*
+Attach("picard_curves/picard_curves/magma/spec");
+    f_Q := ChangeRing(f,Rationals());
+    disc := AbsoluteValue(QuarticDiscriminant(PicardForm(ReducedWeierstrassEquation(f_Q))));
     disc := Numerator(disc)*Denominator(disc);
+*/
     firstrun := true;
     for N := primesstart to primesend do
         p := NthPrime(N);
+/*
         if disc mod p ne 0 then
+*/
+        if cond mod p ne 0 then
             pstr := IntegerToString(p);
             fcoeffs := [IntegerToString(c) : c in Coefficients(f)];
             fstr := "x^4+" cat fcoeffs[3] cat "x^2+" cat fcoeffs[2] cat "x+" cat fcoeffs[1];
@@ -93,11 +101,11 @@ G := GSp(6,7);
 G := CSp(6,7);
 load "new_data_7.txt";
 
-function find_image(f, possibs, possible_charpolstats : primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
+function find_image(f, cond, possibs, possible_charpolstats : primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
     Z := Integers();
     Z7 := Integers(7);
     P7<T> := PolynomialRing(Z7);
-    Lpols := getLpols(f, primesstart, primesend);
+    Lpols := getLpols(f, cond, primesstart, primesend);
     charpolys := [x[1] : x in charpols];
     charpolsshowingup := [];
     skipfrobdistcalc := false;
@@ -173,7 +181,7 @@ function find_image(f, possibs, possible_charpolstats : primesstart := 3, primes
         print "More primes need to be sampled. Sampling more primes...";
         newprimesstart := primesend + 1;
         newprimesend := primesend + 1000;
-        return find_image(f, possibs, possible_charpolstats : primesstart := newprimesstart, primesend := newprimesend, list_of_counts := list_of_counts);
+        return find_image(f, cond, possibs, possible_charpolstats : primesstart := newprimesstart, primesend := newprimesend, list_of_counts := list_of_counts);
     elif #possibilities[1] gt 1 then
         print "Sampled data about frobenius cannot distinguish the image upto GL conjugacy uniquely.";
         print "The image could be one of the following subgroups:";
@@ -185,7 +193,7 @@ function find_image(f, possibs, possible_charpolstats : primesstart := 3, primes
     end if;
 end function;
 
-function lifttoQzeta3(f, K, H, G, CCs, charpols, l : possibs := [], possible_charpolstats := [], primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
+function lifttoQzeta3(f, cond, K, H, G, CCs, charpols, l : possibs := [], possible_charpolstats := [], primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
     charpolys := [x[1] : x in charpols];
     Fl := GF(l);
     Ul, il := UnitGroup(Fl);
@@ -243,7 +251,7 @@ function lifttoQzeta3(f, K, H, G, CCs, charpols, l : possibs := [], possible_cha
 
     Z := Integers();
     P7<T> := PolynomialRing(Fl);
-    Lpols := getLpols(f, primesstart, primesend);
+    Lpols := getLpols(f, cond, primesstart, primesend);
     charpolsshowingup := [];
     skipcharpoldistcalc := false;
     for i := 1 to #Lpols do
@@ -333,15 +341,16 @@ end function;
 Z := Integers();
 P<x> := PolynomialRing(Z);
 f := x^4+x^2+1;
+cond := PicardConductor(f);
 for i := 1 to 4 do
-    mod7img_overQzeta21 := find_image(f,subs_with_charpolstat_GLconjinfo[i],all_charpolstats[i]);
+    mod7img_overQzeta21 := find_image(f, cond, subs_with_charpolstat_GLconjinfo[i],all_charpolstats[i]);
     if mod7img_overQzeta21 ne [] then
         if #mod7img_overQzeta21 eq 1 then
             K := mod7img_overQzeta21[1]`subgroup;
             if BaseRing(K) eq Integers(7) then
                 K := ChangeRing(K,GF(7));
             end if;
-            mod7img_overQzeta3 := lifttoQzeta3(f,K,H,G,CCs,charpols,7);
+            mod7img_overQzeta3 := lifttoQzeta3(f,cond,K,H,G,CCs,charpols,7);
             print mod7img_overQzeta3;
         end if;
     end if;
