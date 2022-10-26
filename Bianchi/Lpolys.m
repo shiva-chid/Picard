@@ -155,9 +155,12 @@ function liftLpolys(CMlistfile,C);
     Lpolyslist := [];
     while not IsEof(s) do
         s := Split(s,":");
+        if #s ne 9 then
+            s := Gets(CMlistfile);
+            continue;
+        end if;
         p := StringToInteger(s[4]);
         assert IsPrime(p);
-        assert #s eq 9;
         CMmat := Split(s[9],"[],");
         CMmat := [[StringToInteger(CMmat[3*i+1]),StringToInteger(CMmat[3*i+2]),StringToInteger(CMmat[3*i+3])] : i in [0..2]];
         if p mod 3 eq 1 then

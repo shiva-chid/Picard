@@ -41,12 +41,21 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
 
     cond := ell*cond;
     print Factorisation(cond);
-/*
-We need to replace G by a DirichletGroup over Q(zeta_3).
-The ell-torsion representation rho_ell is reducible only when restricted to G_{Q(zeta_3)}.
-So the desired one-dimensional subquotient characters are characters of G_{Q(zeta_3)}.
-*/
-    G := DirichletGroup(cond,GF(ell));
+
+    F<zeta3> := CyclotomicField(3);
+    OF := RingOfIntegers(F);
+    G := HeckeCharacterGroup(cond*OF);
+    Q_zeta_lminus1 := CyclotomicField(ell-1);
+    G := TargetRestriction(G,Q_zeta_lminus1);
+
+    omegaF, incl1 := TorsionUnitGroup(Q_zeta_lminus1);
+    F_ell := GF(ell);
+    F_ellcross, incl2 := MultiplicativeGroup(F_ell);
+    assert #omegaF eq #F_ellcross;
+    alp := incl2(F_ellcross.1);
+    isom := hom<omegaF -> F_ellcross | F_ellcross.1>;
+    assert #Kernel(isom) eq 1;
+
 
     Lpols := getLpols(f, cond, 1, primes_bound);
     charpols := [<x[1],P_ell ! Reverse(x[2])> : x in Lpols];
@@ -54,9 +63,9 @@ So the desired one-dimensional subquotient characters are characters of G_{Q(zet
     print charpols;
 */
 
-    gens_G := Generators(G);
+    gens_G := SetToSequence(Generators(G));
     n := #gens_G;
-    exps_G := [Order(G.i) : i in [1..n]];
+    exps_G := [Order(chi) : chi in gens_G];
 
     print exps_G;
     print [Conductor(chi) : chi in gens_G];
@@ -64,23 +73,38 @@ So the desired one-dimensional subquotient characters are characters of G_{Q(zet
     X := Set(CartesianProduct([[0..e-1] : e in exps_G]));
     ind := 1;
     charpols := [x : x in charpols | x[1] mod 3 eq 1];
-    while #X gt 2 do
+    while #X gt 0 do
         p := charpols[ind,1];
         charpol := charpols[ind,2];
-
-        print p, #X;
+        
+        p_idealfacs := Factorisation(p*OF);
+        p1 := p_idealfacs[1,1];
+        p2 := p_idealfacs[2,1];
 
         if cond mod p ne 0 then
             eigvals_rhoell_frobp := [r[1] : r in Roots(charpol)];
-            X := [x : x in X | Evaluate(&*[(G.i)^(x[i]) : i in [1..n]],p) in eigvals_rhoell_frobp];
+/*
+            if #eigvals_rhoell_frobp lt 2 then
+                print p, charpol;
+                ind := ind+1;
+                if ind gt #charpols then
+                    printf "Checked %o primes, up to %o\n", #charpols, p;
+                    break;
+                end if;
+                continue;
+            end if;
+*/
+            X := [x : x in X | incl2(isom((&*[(gens_G[i])^(x[i]) : i in [1..n]])(p1)@@incl1)) in eigvals_rhoell_frobp];
         end if;
+        print p, #X;
         ind := ind+1;
         if ind gt #charpols then
-            printf "Exceeded the bound for primes";
+            printf "Checked %o primes, up to %o\n", #charpols, p;
             break;
         end if;
     end while;
-    X_chars := [&*[(G.i)^x[i] : i in [1..n]] : x in X];
+
+    X_chars := <&*[(gens_G[i])^x[i] : i in [1..n]] : x in X>;
     return X_chars;
 end function;
 
@@ -94,6 +118,6 @@ cond := PicardConductor(f);
 onedim_subreps_of7tors := find_onedimchar(f,cond,7);
 
 [<Conductor(chi), Order(chi)> : chi in onedim_subreps_of7tors];
-[ValueList(AssociatedPrimitiveCharacter(chi)) : chi in onedim_subreps_of7tors];
+[Factorisation(Norm(Conductor(AssociatedPrimitiveCharacter(chi)))) : chi in onedim_subreps_of7tors];
 
-
+fields_cutout_over_Qzeta3 := [NumberField(AbelianExtension(chi)) : chi in onedim_subreps_of7tors];
