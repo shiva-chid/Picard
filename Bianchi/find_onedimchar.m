@@ -48,6 +48,7 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
     Q_zeta_lminus1 := CyclotomicField(ell-1);
     G := TargetRestriction(G,Q_zeta_lminus1);
 
+// If SetTargetRing(~chi,GF(ell).1) works, the following code could be simplified.
     omegaF, incl1 := TorsionUnitGroup(Q_zeta_lminus1);
     F_ell := GF(ell);
     F_ellcross, incl2 := MultiplicativeGroup(F_ell);
@@ -59,9 +60,7 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
 
     Lpols := getLpols(f, cond, 1, primes_bound);
     charpols := [<x[1],P_ell ! Reverse(x[2])> : x in Lpols];
-/*
-    print charpols;
-*/
+//    print charpols;
 
     gens_G := SetToSequence(Generators(G));
     n := #gens_G;
@@ -83,17 +82,6 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
 
         if cond mod p ne 0 then
             eigvals_rhoell_frobp := [r[1] : r in Roots(charpol)];
-/*
-            if #eigvals_rhoell_frobp lt 2 then
-                print p, charpol;
-                ind := ind+1;
-                if ind gt #charpols then
-                    printf "Checked %o primes, up to %o\n", #charpols, p;
-                    break;
-                end if;
-                continue;
-            end if;
-*/
             X := [x : x in X | incl2(isom((&*[(gens_G[i])^(x[i]) : i in [1..n]])(p1)@@incl1)) in eigvals_rhoell_frobp];
         end if;
         print p, #X;
@@ -121,3 +109,8 @@ onedim_subreps_of7tors := find_onedimchar(f,cond,7);
 [Factorisation(Norm(Conductor(AssociatedPrimitiveCharacter(chi)))) : chi in onedim_subreps_of7tors];
 
 fields_cutout_over_Qzeta3 := [NumberField(AbelianExtension(chi)) : chi in onedim_subreps_of7tors];
+
+
+
+
+
