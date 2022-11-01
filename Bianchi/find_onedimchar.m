@@ -73,6 +73,7 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
     ind := 1;
     charpols := [x : x in charpols | x[1] mod 3 eq 1];
     primes := [x[1] : x in charpols];
+    printf "Using L-polynomials at the (ordinary) primes\n%o\n", primes;
     prime_ideals := [];
     numb_of_chars_to_expect := 6;
     all_roots_charpols := [];
@@ -88,7 +89,7 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
             roots_charpol := Roots(charpol);
             Append(~all_roots_charpols, &join[{*r[1] : i in [1..r[2]]*} : r in roots_charpol]);
             eigvals_rhoell_frobp := [r[1] : r in roots_charpol];
-            numb_of_chars_to_expect := Minimum(numb_of_chars_to_expect,&+[r[2] : r in roots_charpol]);
+            numb_of_chars_to_expect := Minimum(numb_of_chars_to_expect,(roots_charpol eq []) select 0 else &+[r[2] : r in roots_charpol]);
             X := [x : x in X | incl2(isom((&*[(gens_G[i])^(x[i]) : i in [1..n]])(p1)@@incl1)) in eigvals_rhoell_frobp];
         end if;
         print p, #X;
@@ -101,16 +102,15 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
 
     X_chars := <&*[(gens_G[i])^x[i] : i in [1..n]] : x in X>;
     RF := recformat<char : GrpHeckeElt, values_modell : Assoc>;
-    X_chars := [rec<RF | char := chi, values_modell := AssociativeArray()> : chi in X_chars];
     X_chars_values := [];
     for chi in X_chars do
         chi_values_modell := AssociativeArray();
         for i := 1 to #primes do
             p := primes[i];
             p1 := prime_ideals[i];
-            chi_values_modell[p] := incl2(isom((chi`char)(p1)@@incl1));
+            chi_values_modell[p] := incl2(isom((chi)(p1)@@incl1));
         end for;
-        Append(~X_chars_values,rec<RF | char := chi`char, values_modell := chi_values_modell>);
+        Append(~X_chars_values,rec<RF | char := chi, values_modell := chi_values_modell>);
     end for;
 /*
     if #X_chars gt numb_of_chars_to_expect then
@@ -133,6 +133,24 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
             print ps[i], roots_charpols[i];
         end for;
 */
+    printf "Based on the L-polynomials at ORDINARY primes, only the following characters COULD appear as subquotients of rhobar_%o:\n", ell, ell;
+    if numb_of_chars_to_expect ne #X_chars then
+        printf "Found %o potential characters, but only %o characters are expected.\n", #X_chars, numb_of_chars_to_expect;
+        if numb_of_chars_to_expect eq 2 and #X_chars eq 4 then
+            prod_all_chars := X_chars[1]*X_chars[2]*X_chars[3]*X_chars[4];
+            X_chars_values_new := [];
+            for j := 2 to 4 do
+                testpair := X_chars[1]*X_chars[j];
+                otherinds := Exclude([2..4],j);
+                if testpair^2 eq prod_all_chars and Conductor(testpair) eq ell*OF then
+                    Append(~X_chars_values_new, [X_chars_values[1], X_chars_values[j]]);
+                    Append(~X_chars_values_new, [X_chars_values[k] : k in otherinds]);
+                end if;
+            end for;
+        end if;
+        printf "The product of a dual-pair of characters appearing in rhobar_%o is the mod-%o cyclotomic character. Pairing up the characters that could appear, using this fact.\n", ell, ell;
+        X_chars_values := X_chars_values_new;
+    end if;
     return numb_of_chars_to_expect, X_chars_values, all_roots_charpols;
 end function;
 
@@ -143,12 +161,12 @@ end function;
 P<x> := PolynomialRing(IntegerRing());
 f := x^4 + x^2 + 1;
 cond := PicardConductor(f);
-n, onedim_subreps_of7tors := find_onedimchar(f,cond,7);
+n, onedim_subreps_of7tors, all_roots_charpols := find_onedimchar(f,cond,7);
 
-[<Conductor(chi), Order(chi)> : chi in onedim_subreps_of7tors];
-[Factorisation(Norm(Conductor(AssociatedPrimitiveCharacter(chi)))) : chi in onedim_subreps_of7tors];
+[<Conductor(chi`char), Order(chi`char)> : chi in onedim_subreps_of7tors];
+[Factorisation(Norm(Conductor(AssociatedPrimitiveCharacter(chi`char)))) : chi in onedim_subreps_of7tors];
 
-fields_cutout_over_Qzeta3 := [NumberField(AbelianExtension(chi)) : chi in onedim_subreps_of7tors];
+fields_cutout_over_Qzeta3 := [NumberField(AbelianExtension(chi`char)) : chi in onedim_subreps_of7tors];
 
 
 /*
