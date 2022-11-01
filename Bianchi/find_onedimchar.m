@@ -72,6 +72,10 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
     X := Set(CartesianProduct([[0..e-1] : e in exps_G]));
     ind := 1;
     charpols := [x : x in charpols | x[1] mod 3 eq 1];
+    primes := [x[1] : x in charpols];
+    prime_ideals := [];
+    numb_of_chars_to_expect := 6;
+    all_roots_charpols := [];
     while #X gt 0 do
         p := charpols[ind,1];
         charpol := charpols[ind,2];
@@ -79,9 +83,12 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
         p_idealfacs := Factorisation(p*OF);
         p1 := p_idealfacs[1,1];
         p2 := p_idealfacs[2,1];
-
+        Append(~prime_ideals,p1);
         if cond mod p ne 0 then
-            eigvals_rhoell_frobp := [r[1] : r in Roots(charpol)];
+            roots_charpol := Roots(charpol);
+            Append(~all_roots_charpols, &join[{*r[1] : i in [1..r[2]]*} : r in roots_charpol]);
+            eigvals_rhoell_frobp := [r[1] : r in roots_charpol];
+            numb_of_chars_to_expect := Minimum(numb_of_chars_to_expect,&+[r[2] : r in roots_charpol]);
             X := [x : x in X | incl2(isom((&*[(gens_G[i])^(x[i]) : i in [1..n]])(p1)@@incl1)) in eigvals_rhoell_frobp];
         end if;
         print p, #X;
@@ -93,7 +100,40 @@ function find_onedimchar(f, cond, ell : primes_bound := 100);
     end while;
 
     X_chars := <&*[(gens_G[i])^x[i] : i in [1..n]] : x in X>;
-    return X_chars;
+    RF := recformat<char : GrpHeckeElt, values_modell : Assoc>;
+    X_chars := [rec<RF | char := chi, values_modell := AssociativeArray()> : chi in X_chars];
+    X_chars_values := [];
+    for chi in X_chars do
+        chi_values_modell := AssociativeArray();
+        for i := 1 to #primes do
+            p := primes[i];
+            p1 := prime_ideals[i];
+            chi_values_modell[p] := incl2(isom((chi`char)(p1)@@incl1));
+        end for;
+        Append(~X_chars_values,rec<RF | char := chi`char, values_modell := chi_values_modell>);
+    end for;
+/*
+    if #X_chars gt numb_of_chars_to_expect then
+        ps := [x[1] : x in charpols];
+        roots_charpols := [&join[{*r[1] : i in [1..r[2]]*} : r in Roots(charpol[2])] : charpol in charpols];
+
+        V := VectorSpace(GF(2),#X_chars);
+        count := 0;
+        good_vs := [];
+        for v in V do
+            if &+v eq numb_of_chars_to_expect then
+                count := count + 1;
+
+
+
+            end if;
+        end for;
+
+        for i := 1 to #charpols do
+            print ps[i], roots_charpols[i];
+        end for;
+*/
+    return numb_of_chars_to_expect, X_chars_values, all_roots_charpols;
 end function;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,7 +143,7 @@ end function;
 P<x> := PolynomialRing(IntegerRing());
 f := x^4 + x^2 + 1;
 cond := PicardConductor(f);
-onedim_subreps_of7tors := find_onedimchar(f,cond,7);
+n, onedim_subreps_of7tors := find_onedimchar(f,cond,7);
 
 [<Conductor(chi), Order(chi)> : chi in onedim_subreps_of7tors];
 [Factorisation(Norm(Conductor(AssociatedPrimitiveCharacter(chi)))) : chi in onedim_subreps_of7tors];
@@ -111,6 +151,9 @@ onedim_subreps_of7tors := find_onedimchar(f,cond,7);
 fields_cutout_over_Qzeta3 := [NumberField(AbelianExtension(chi)) : chi in onedim_subreps_of7tors];
 
 
+/*
+Why are there 4 characters found for y^3 = x^4-1? It should be 0, 2 or 6, isn't it?
+*/
 
 
 

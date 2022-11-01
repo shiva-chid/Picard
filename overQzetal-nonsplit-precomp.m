@@ -268,9 +268,191 @@ function precomputation_nonsplitcase(l);
     printf "Working using these %o subgroups of DelU(3,%o), which are not necessarily distinct upto G-conjugacy, where G = GSp(6,%o).\n\n", #ZH, l, l;
     ZHtrue := [subs_of_maxsub(G,H,K,ZDelU_RF,ZH,maptoDelU,DelUinjG,l,CCDelU,classmapDelU,classfunc_DelUtoG,#CCG) : K in MHtrue];
 //    delete ZH;
-    return ZHtrue;
+
+
+    charpolys := [];
+    charpolynumbers := [];
+    cctocharpol := [];
+    for i := 1 to #CCG do
+        x := CCG[i,3];
+        f := CharacteristicPolynomial(x);
+        if not f in charpolys then
+            Append(~charpolys,f);
+            Append(~charpolynumbers,CCG[i,2]);
+            Append(~cctocharpol,#charpolys);
+        else
+            n := Index(charpolys,f);
+            charpolynumbers[n] := charpolynumbers[n] + CCG[i,2];
+            Append(~cctocharpol,n);
+        end if;
+    end for;
+    charpols := [<charpolys[i],charpolynumbers[i]> : i in [1..#charpolys]];
+    printf "There are %o conjugacy classes in GSp(6,F_%o), which give %o distinct characteristic polynomials\n\n", #CCG, l, #charpols;
+
+    ccstats := [[subK`distG : subK in K] : K in ZHtrue];
+
+    charpolstats := [];
+    for i := 1 to #ccstats do
+        temp := [];
+        printf "Starting computation of charpol distribution stats for each subgroup of the %oth maximal subgroup...\n", i;
+        for j := 1 to #ccstats[i] do
+            dat := ccstats[i,j];
+            charpoldat := [&+[dat[l] : l in [1..#dat] | cctocharpol[l] eq k] : k in [1..#charpols]];
+            Append(~temp,charpoldat);
+            if j mod 100 eq 0 then
+                printf "Computed charpol distribution stats for %o subgroups...\n", j;
+            end if;
+        end for;
+        Append(~charpolstats,temp);
+        printf "Done computing charpol distribution stats for all subgroups of the %oth maximal subgroup\n\n", i;
+    end for;
+
+    all_ccstats := [];
+    subs_with_ccstat := [];
+    for i := 1 to #ccstats do
+        tempccstats := [];
+        tempsubs := [];
+        for j := 1 to #ccstats[i] do
+            if not ccstats[i,j] in tempccstats then
+                Append(~tempccstats,ccstats[i,j]);
+                Append(~tempsubs,[ZHtrue[i,j]]);
+            else
+                n := Index(tempccstats,ccstats[i,j]);
+                Append(~tempsubs[n],ZHtrue[i,j]);
+            end if;
+        end for;
+        Append(~all_ccstats,tempccstats);
+        Append(~subs_with_ccstat,tempsubs);
+    end for;
+    all_charpolstats := [];
+    subs_with_charpolstat := [];
+    for i := 1 to #charpolstats do
+        tempcharpolstats := [];
+        tempsubs := [];
+        for j := 1 to #charpolstats[i] do
+            if not charpolstats[i,j] in tempcharpolstats then
+                Append(~tempcharpolstats,charpolstats[i,j]);
+                Append(~tempsubs,[ZHtrue[i,j]]);
+            else
+                n := Index(tempcharpolstats,charpolstats[i,j]);
+                Append(~tempsubs[n],ZHtrue[i,j]);
+            end if;
+        end for;
+        Append(~all_charpolstats,tempcharpolstats);
+        Append(~subs_with_charpolstat,tempsubs);
+    end for;
+
+    printf "For each maximal subgroup of DelU(3,F_%o), its factored index in DelU(3,F_%o), the number of subgroups contained in it, the number of distinct cc distribution stats of subgroups, the number of distinct charpol distribution stats of subgroups are shown below\n:", l, l;
+    for i := 1 to #ZHtrue do
+        printf "%o, %o, %o, %o", Factorisation(ExactQuotient(#DelU,MHtrue[i]`order)), #ZHtrue[i], #all_ccstats[i], #all_charpolstats[i];
+    end for;
+
+    subs_with_ccstat_GLconjinfo := [];
+    for i := 1 to #all_ccstats do
+        tempsubs := [];
+        for j := 1 to #all_ccstats[i] do
+            temp := [];
+            subs := subs_with_ccstat[i,j];
+            for k := 1 to #subs do
+                K := subs[k]`subgroup;
+                bool := true;
+                for ll := 1 to #temp do
+                    if IsConjugate(GL(6,Fl),K,temp[ll,1]`subgroup) then
+                        temp[ll] := temp[ll] cat [subs[k]];
+                        bool := false;
+                        break;
+                    end if;
+                end for;
+                if bool then
+                    Append(~temp,[subs[k]]);
+                end if;
+            end for;
+            Append(~tempsubs,temp);
+        end for;
+        Append(~subs_with_ccstat_GLconjinfo,tempsubs);
+    end for;
+
+    subs_with_charpolstat_GLconjinfo := [];
+    for i := 1 to #all_charpolstats do
+        tempsubs := [];
+        for j := 1 to #all_charpolstats[i] do
+            temp := [];
+            subs := subs_with_charpolstat[i,j];
+            for k := 1 to #subs do
+                K := subs[k]`subgroup;
+                bool := true;
+                for ll := 1 to #temp do
+                    if IsConjugate(GL(6,Fl),K,temp[ll,1]`subgroup) then
+                        temp[ll] := temp[ll] cat [subs[k]];
+                        bool := false;
+                        break;
+                    end if;
+                end for;
+                if bool then
+                    Append(~temp,[subs[k]]);
+                end if;
+            end for;
+            Append(~tempsubs,temp);
+        end for;
+        Append(~subs_with_charpolstat_GLconjinfo,tempsubs);
+    end for;
+
+    return G, H, MHtrue, ZHtrue, CCG, classmapG, charpols, cctocharpol, ccstats, charpolstats, all_ccstats, all_charpolstats, subs_with_ccstat_GLconjinfo, subs_with_charpolstat_GLconjinfo;
 end function;
 
+/*
+time G, H, MH, ZH, CCs, class, charpols, cctocharpol, ccstats, charpolstats, all_ccstats, all_charpolstats, subs_with_ccstat_GLconjinfo, subs_with_charpolstat_GLconjinfo := precomputation_nonsplitcase(5);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
+PrintFile("all_data_5.txt", "Hgens := ");
+PrintFileMagma("all_data_5.txt", [Eltseq(h) : h in Generators(H)]);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "H := sub<G|Hgens>;");
+
+PrintFile("all_data_5.txt", "MH := ");
+PrintFileMagma("all_data_5.txt", MH);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "ZH := ");
+PrintFileMagma("all_data_5.txt", ZH);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "CCs := ");
+PrintFileMagma("all_data_5.txt", CCs);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "charpols := ");
+PrintFileMagma("all_data_5.txt", charpols);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "cctocharpol := ");
+PrintFileMagma("all_data_5.txt", cctocharpol);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "ccstats := ");
+PrintFileMagma("all_data_5.txt", ccstats);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "charpolstats := ");
+PrintFileMagma("all_data_5.txt", charpolstats);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "all_ccstats := ");
+PrintFileMagma("all_data_5.txt", all_ccstats);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "all_charpolstats := ");
+PrintFileMagma("all_data_5.txt", all_charpolstats);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "subs_with_ccstat_GLconjinfo := ");
+PrintFileMagma("all_data_5.txt", subs_with_ccstat_GLconjinfo);
+PrintFile("all_data_5.txt", ";");
+
+PrintFile("all_data_5.txt", "subs_with_charpolstat_GLconjinfo := ");
+PrintFileMagma("all_data_5.txt", subs_with_charpolstat_GLconjinfo);
+PrintFile("all_data_5.txt", ";");
+*/
+
+
 
