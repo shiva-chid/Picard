@@ -137,11 +137,11 @@ function C2test(f,cond : primes_bound := 500);
                     if Type(Lpol) ne MonStgElt then
                         facs := Factorisation(ChangeRing(Lpol,F));
                         if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
-                            printf "Using a split prime in C2test. ";
+//                            printf "Using a split prime in C2test. ";
                             fac1 := facs[1,1];
                             fac2 := facs[2,1];
                             newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
-                            if newnum ne 0 then printf "It has worked.\n"; end if;
+//                            if newnum ne 0 then printf "It has worked.\n"; end if;
                             bignum := GCD(bignum,newnum);
                         end if;
                     end if;
