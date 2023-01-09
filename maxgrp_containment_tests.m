@@ -4,6 +4,10 @@ load "update_CMforms.m";
 
 function getLpol(f,cond,p);
     P<x> := Parent(f);
+    if BaseRing(P) ne Integers() then
+        P<x> := PolynomialRing(Integers());
+        f := P ! f;
+    end if;
     if cond mod p eq 0 then
         return "Bad Prime";
     end if;
