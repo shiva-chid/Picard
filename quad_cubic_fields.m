@@ -1,16 +1,24 @@
-function quad_fields(cond);
+function quad_fields(radical_cond : cond := 1);
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
-    G := HeckeCharacterGroup(4*cond*OF);
+    if cond ne 1 then
+        G := HeckeCharacterGroup(4*cond*OF);
+    else
+        G := HeckeCharacterGroup(4*3*radical_cond*OF);
+    end if;
     G := TargetRestriction(G,CyclotomicField(1));
     EG := [x : x in Elements(G) | Order(x) eq 2];
     return EG;
 end function;
 
-function cubic_fields(cond);
+function cubic_fields(radical_cond : cond := 1);
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
-    G := HeckeCharacterGroup(3*cond*OF);
+    if cond ne 1 then
+        G := HeckeCharacterGroup(3*cond*OF);
+    else
+        G := HeckeCharacterGroup(4*3*radical_cond*OF);
+    end if;
     G := TargetRestriction(G,F);
     EG := [x : x in Elements(G) | Order(x) eq 3];
     EG_prune := {};

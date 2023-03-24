@@ -2,17 +2,17 @@ load "Lpolys.m";
 load "quad_cubic_fields.m";
 load "update_CMforms.m";
 
-function getLpol(f,cond,p);
+function getLpol(f,radical_cond,p);
     P<x> := Parent(f);
     if BaseRing(P) ne Integers() then
         P<x> := PolynomialRing(Integers());
         f := P ! f;
     end if;
-    if cond mod p eq 0 then
+    if radical_cond mod p eq 0 then
         return "Bad Prime";
     end if;
 /*
-    require cond mod p ne 0 : "Bad Prime";
+    require radical_cond mod p ne 0 : "Bad Prime";
 */
     pstr := IntegerToString(p);
     fcoeffs := [IntegerToString(c) : c in Coefficients(f)];
@@ -35,15 +35,19 @@ end function;
 
 
 // This is C1test using the Hecke Polynomials computed (and stored) from Grossencharacters
-function C1test(f,cond : primes_bound := 500);
+function C1test(f,radical_cond : cond := 1, primes_bound := 500);
     Z := Integers();
     P<t> := PolynomialRing(Rationals());
-    cmformsheckepols_alllevels := update_CMforms(cond : primes_bound := primes_bound);
+    if cond eq 1 then
+        cmformsheckepols_alllevels := update_CMforms1(radical_cond : primes_bound := primes_bound);
+    else
+        cmformsheckepols_alllevels := update_CMforms(cond : primes_bound := primes_bound);
+    end if;
 
     bignum := 0;
     for p in PrimesUpTo(primes_bound) do
-        if p ge 53 and p mod 3 eq 1 and cond mod p ne 0 then
-            Lpol := getLpol(f,cond,p);
+        if p ge 53 and p mod 3 eq 1 and radical_cond mod p ne 0 then
+            Lpol := getLpol(f,radical_cond,p);
             if Type(Lpol) eq MonStgElt then
                 continue p;
             end if;
@@ -67,18 +71,18 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C3test(f,cond : primes_bound := 500);
+function C3test(f,radical_cond : cond := 1, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
     possibly_nonsurj_primes := [];
-    cubicdirichletchars := cubic_fields(cond);
+    cubicdirichletchars := cubic_fields(radical_cond : cond := cond);
     for chi in cubicdirichletchars do
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
-            if cond mod p eq 0 then continue; end if;
+            if radical_cond mod p eq 0 then continue; end if;
             if p ne 2 and p mod 3 eq 2 then
                 if chi(p) ne 1 then
-                    Lpol := getLpol(f,cond,p);
+                    Lpol := getLpol(f,radical_cond,p);
                     if Type(Lpol) ne MonStgElt then
 //                        printf "Using an inert prime in C3test. ";
                         newnum := Coefficient(Lpol,5);
@@ -89,7 +93,7 @@ function C3test(f,cond : primes_bound := 500);
             elif p mod 3 eq 1 then
                 pfacs := PrimeIdealsOverPrime(F,p);
                 if chi(pfacs[1]) ne 1 and chi(pfacs[2]) ne 1 then
-                    Lpol := getLpol(f,cond,p);
+                    Lpol := getLpol(f,radical_cond,p);
                     if Type(Lpol) ne MonStgElt then
                         facs := Factorisation(ChangeRing(Lpol,F));
                         if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
@@ -118,22 +122,22 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C2test(f,cond : primes_bound := 500);
+function C2test(f,radical_cond : cond := cond, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
-    possibly_nonsurj_primes := C3test(f,cond);
+    possibly_nonsurj_primes := C3test(f,radical_cond : cond := cond, primes_bound := primes_bound);
     if Type(possibly_nonsurj_primes) eq RngIntElt then
         possibly_nonsurj_primes := [];
     end if;
-    quaddirichletchars := quad_fields(cond);
+    quaddirichletchars := quad_fields(radical_cond : cond := cond);
     for chi in quaddirichletchars do
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
-            if cond mod p eq 0 then continue; end if;
+            if radical_cond mod p eq 0 then continue; end if;
             if p mod 3 eq 1 then
                 pfacs := PrimeIdealsOverPrime(F,p);
                 if chi(pfacs[1]) ne 1 and chi(pfacs[2]) ne 1 then
-                    Lpol := getLpol(f,cond,p);
+                    Lpol := getLpol(f,radical_cond,p);
                     if Type(Lpol) ne MonStgElt then
                         facs := Factorisation(ChangeRing(Lpol,F));
                         if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
