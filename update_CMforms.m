@@ -42,7 +42,7 @@ function heckepols(grosschars, primes_bound);
     F<zeta3> := CyclotomicField(3);
     levs := Sort(SetToSequence({3*Norm(Modulus(grosschar)) : grosschar in grosschars}));
     grosschars_partitioned := [[grosschar : grosschar in grosschars | 3*Norm(Modulus(grosschar)) eq N] : N in levs];
-    printf "There are \n%o\n Grossencharacters of levels \n%o\n respectively\n", [#x : x in grosschars_partitioned], levs;
+    printf "There are \n%o\n Grossencharacters of levels \n%o\nrespectively\n", [#x : x in grosschars_partitioned], levs;
     heckepolslist := [];
     primes := [p : p in PrimesUpTo(primes_bound) | p mod 3 eq 1];
     for i := 1 to #levs do
@@ -179,12 +179,20 @@ end function;
 
 
 function update_CMforms1(radical_level : primes_bound := 500);
+    Z := Integers();
     existing_hpols := read_heckepolsdb();
     existing_levels := Sort(SetToSequence({x[1] : x in existing_hpols}));
     relevant_existing_hpols := [x : x in existing_hpols | radical_level mod Squarefree(x[1]) eq 0];
 
-    radical_level_ge5 := radical_level/(2^Valuation(radical_level,2)*3^Valuation(radical_level,3));
-    normfrakm := 2^8*3^4*radical_level_ge5^2;
+    radical_level_ge5 := Z!(radical_level/(2^Valuation(radical_level,2)*3^Valuation(radical_level,3)));
+    normfrakm := radical_level_ge5^2;
+    if radical_level mod 6 eq 0 then
+        normfrakm := 2^8*3^4*normfrakm;
+    elif radical_level mod 3 eq 0 then
+        normfrakm := 3^4*normfrakm;
+    elif radical_level mod 2 eq 0 then
+        normfrakm := 2^8*normfrakm;
+    end if;
     remaininglevels := Sort(SetToSequence({27*d : d in Divisors(normfrakm) | &and[Valuation(d,pd) mod 2 eq 0 : pd in PrimeFactors(d) | pd mod 3 eq 2]} diff Set(existing_levels)));
     printf "The database already has data of hecke polynomials for CM forms of levels \n%o\n", Sort(SetToSequence({x[1] : x in relevant_existing_hpols}));
     printf "Now computing this data for the remaining possible levels out of\n%o\n", remaininglevels;
@@ -193,6 +201,7 @@ function update_CMforms1(radical_level : primes_bound := 500);
         return relevant_existing_hpols;
     end if;
 
+/*
     newlevel := LCM(remaininglevels);
     if newlevel lt level then
         printf "New level is %o\n", newlevel;
@@ -200,7 +209,7 @@ function update_CMforms1(radical_level : primes_bound := 500);
         newpols := [x : x in newpols | not x[1] in existing_levels];
         return relevant_existing_hpols cat newpols;
     end if;
-
+*/
     F<zeta3> := CyclotomicField(3);
     zeta6 := zeta3+1;
     OF := RingOfIntegers(F);
@@ -209,7 +218,14 @@ function update_CMforms1(radical_level : primes_bound := 500);
     EDG := Elements(DG);
     _ := exists(chi){x : x in EDG | x(zeta6) eq zeta6};
 
-    max_cond := 2^4*3^2*radical_level_ge5*OF;
+    max_cond := radical_level_ge5*OF;
+    if radical_level mod 6 eq 0 then
+        max_cond := 2^4*3^2*max_cond;
+    elif radical_level mod 3 eq 0 then
+        max_cond := 3^2*max_cond;
+    elif radical_level mod 2 eq 0 then
+        max_cond := 2^4*max_cond;
+    end if;
     printf "Working with the maximum modulus\n%o\n", max_cond;
     G := HeckeCharacterGroup(max_cond);
     printf "The Hecke Character Group of this modulus has %o elements\n", #G;

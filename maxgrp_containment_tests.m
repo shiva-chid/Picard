@@ -53,6 +53,10 @@ function C1test(f,radical_cond : cond := 1, primes_bound := 500);
             end if;
             prod_heckepols := &*[P!x[3] : x in cmformsheckepols_alllevels | x[2] eq p];
             bignum := GCD(bignum,Z!Resultant(Lpol,prod_heckepols));
+//            printf "The latest number bignum, after computing resultants upto primes %o, is %o.\n", p, bignum;
+            if bignum ne 0 and bignum eq 3^(Valuation(bignum,3)) then
+                return [];
+            end if;
         end if;
     end for;
 
@@ -122,7 +126,7 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C2test(f,radical_cond : cond := cond, primes_bound := 500);
+function C2test(f,radical_cond : cond := 1, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
     possibly_nonsurj_primes := C3test(f,radical_cond : cond := cond, primes_bound := primes_bound);

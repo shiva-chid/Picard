@@ -2,10 +2,9 @@ load "maxgrp_containment_tests.m";
 
 function possibly_nonsurj_primes(f : cond := 1);
     if cond eq 1 then
-        radical_cond := Squarefree(Coefficient(f,4))*Squarefree(Discriminant(f));
-        if radical_cond mod 2 ne 0 then
-            radical_cond := 2*radical_cond;
-        end if;
+        radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
+        radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
+        radical_cond := radical_leadcoeff*radical_disc;
         if radical_cond mod 3 ne 0 then
             radical_cond := 3*radical_cond;
         end if;
@@ -25,6 +24,10 @@ end function;
 
 
 P<x> := PolynomialRing(Integers());
+/*
 f := x^4 - x^2 - x + 1;
 possibly_nonsurj_primes(f : cond := 3^8*23^2);
 possibly_nonsurj_primes(f);
+*/
+
+
