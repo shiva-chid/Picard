@@ -12,13 +12,13 @@ function possibly_nonsurj_primes(f : cond := 1, fromCMformsdb := false);
         possibly_C3image := C3test(f,radical_cond);
         possibly_C2image := C2test(f,radical_cond);
 //        return [[2,3,5,7], PrimeFactors(radical_cond), possibly_C1image, possibly_C3image, possibly_C2image];
-        return [[2,3,5,7], possibly_C1image, possibly_C3image, possibly_C2image];
+        return PrimeFactors(radical_cond), [[2,3,5,7], possibly_C1image, possibly_C3image, possibly_C2image];
     else
         possibly_C1image := C1test(f, cond : cond := cond, fromCMformsdb := fromCMformsdb);
         possibly_C3image := C3test(f, cond : cond := cond);
         possibly_C2image := C2test(f, cond : cond := cond);
 //        return [[2,3,5,7], PrimeFactors(cond), possibly_C1image, possibly_C3image, possibly_C2image];
-        return [[2,3,5,7], possibly_C1image, possibly_C3image, possibly_C2image];
+        return PrimeFactors(cond), [[2,3,5,7], possibly_C1image, possibly_C3image, possibly_C2image];
     end if;
 end function;
 
