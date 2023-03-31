@@ -69,12 +69,16 @@ function heckepols(grosschars, primes_bound);
 end function;
 
 
-function update_CMforms(level : primes_bound := 500);
+function update_CMforms(level : primes_bound := 500, fromCMformsdb := false);
 //    if level mod 3 ne 0 then return []; end if;
     if level mod 27 ne 0 then return []; end if;
     existing_hpols := read_heckepolsdb();
     existing_levels := Sort(SetToSequence({x[1] : x in existing_hpols}));
     relevant_existing_hpols := [x : x in existing_hpols | level mod x[1] eq 0];
+
+    if fromCMformsdb then
+        return relevant_existing_hpols;
+    end if;
 
     F<zeta3> := CyclotomicField(3);
     zeta6 := zeta3+1;
@@ -178,11 +182,14 @@ function update_CMforms(level : primes_bound := 500);
 end function;
 
 
-function update_CMforms1(radical_level : primes_bound := 500);
+function update_CMforms1(radical_level : primes_bound := 500, fromCMformsdb := false);
     Z := Integers();
     existing_hpols := read_heckepolsdb();
     existing_levels := Sort(SetToSequence({x[1] : x in existing_hpols}));
     relevant_existing_hpols := [x : x in existing_hpols | radical_level mod Squarefree(x[1]) eq 0];
+    if fromCMformsdb then
+        return relevant_existing_hpols;
+    end if;
 
     radical_level_ge5 := Z!(radical_level/(2^Valuation(radical_level,2)*3^Valuation(radical_level,3)));
     normfrakm := radical_level_ge5^2;

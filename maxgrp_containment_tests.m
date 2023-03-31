@@ -35,13 +35,13 @@ end function;
 
 
 // This is C1test using the Hecke Polynomials computed (and stored) from Grossencharacters
-function C1test(f,radical_cond : cond := 1, primes_bound := 500);
+function C1test(f,radical_cond : cond := 1, primes_bound := 500, fromCMformsdb := false);
     Z := Integers();
     P<t> := PolynomialRing(Rationals());
     if cond eq 1 then
-        cmformsheckepols_alllevels := update_CMforms1(radical_cond : primes_bound := primes_bound);
+        cmformsheckepols_alllevels := update_CMforms1(radical_cond : primes_bound := primes_bound, fromCMformsdb := fromCMformsdb);
     else
-        cmformsheckepols_alllevels := update_CMforms(cond : primes_bound := primes_bound);
+        cmformsheckepols_alllevels := update_CMforms(cond : primes_bound := primes_bound, fromCMformsdb := fromCMformsdb);
     end if;
 
     bignum := 0;
