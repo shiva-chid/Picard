@@ -17,10 +17,16 @@ function getLpol(f,radical_cond,p);
     pstr := IntegerToString(p);
     fcoeffs := [IntegerToString(c) : c in Coefficients(f)];
     fstr := "x^4+" cat fcoeffs[3] cat "x^2+" cat fcoeffs[2] cat "x+" cat fcoeffs[1];
+/*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
     C := Coefficients(f)[1..3];
     Lpol := liftLpolys(fil,C);
+*/
+    C := Coefficients(f)[1..3];
+    cartmanmat := Pipe("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
+    Lpol := liftLpoly(cartmanmat,C);
+
 /*
     print Lpol;
 */

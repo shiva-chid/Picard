@@ -187,3 +187,35 @@ function liftLpolys(CMlistfile,C);
     end while;
     return Lpolyslist;
 end function;
+
+
+function liftLpoly(CartManMat_string,C);
+    s := CartManMat_string;
+    Lpolyslist := [];
+    s := Split(s,":");
+    assert #s eq 9;
+    p := StringToInteger(s[4]);
+    assert IsPrime(p);
+    CMmat := Split(s[9],"[],");
+    CMmat := [[StringToInteger(CMmat[3*i+1]),StringToInteger(CMmat[3*i+2]),StringToInteger(CMmat[3*i+3])] : i in [0..2]];
+    if p mod 3 eq 1 then
+        lpoly := lift1mod3(p,CMmat);
+        if Type(lpoly) ne MonStgElt then
+            return [<p,lpoly>];
+/*
+        else
+            print p, lpoly;
+*/
+        end if;
+    end if;
+    if p mod 3 eq 2 then
+        lpoly := lift2mod3(p,CMmat,C);
+        if Type(lpoly) ne MonStgElt then
+            return [<p,lpoly>];
+/*
+        else
+            print p, lpoly;
+*/
+        end if;
+    end if;
+end function;

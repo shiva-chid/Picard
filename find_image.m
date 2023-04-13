@@ -34,6 +34,57 @@ Attach("picard_curves/picard_curves/magma/spec");
     return Lpols;
 end function;
 
+
+function getLpol(f,radical_cond,p);
+    P<x> := Parent(f);
+    if BaseRing(P) ne Integers() then
+        P<x> := PolynomialRing(Integers());
+        f := P ! f;
+    end if;
+    if radical_cond mod p eq 0 then
+        return "Bad Prime";
+    end if;
+/*
+    require radical_cond mod p ne 0 : "Bad Prime";
+*/
+    pstr := IntegerToString(p);
+    fcoeffs := [IntegerToString(c) : c in Coefficients(f)];
+    fstr := "x^4+" cat fcoeffs[3] cat "x^2+" cat fcoeffs[2] cat "x+" cat fcoeffs[1];
+/*
+    System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
+    fil := Open("CartManmat_for_p.txt", "r");
+    C := Coefficients(f)[1..3];
+    Lpol := liftLpolys(fil,C);
+*/
+    C := Coefficients(f)[1..3];
+    cartmanmat := Pipe("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
+    Lpol := liftLpoly(cartmanmat,C);
+
+/*
+    print Lpol;
+*/
+    if #Lpol ne 1 then
+        return "Error in computing L-polynomial";
+    end if;
+/*
+    require #Lpol eq 1 : "Error in computing L-polynomial";
+*/
+    return Lpol;
+end function;
+
+function getLpols(f, cond, primesstart, primesend);
+    P<x> := Parent(f);
+    Lpols := [];
+    for N := primesstart to primesend do
+        p := NthPrime(N);
+        if cond mod p ne 0 then
+            Lpols := Lpols cat getLpol(f,cond,p);
+        end if;
+    end for;
+    return Lpols;
+end function;
+
+
 function charpol_dist(H,G : CCs := [], charpols := []);
     if charpols ne [] then
         if H eq G then
