@@ -200,22 +200,16 @@ function liftLpoly(CartManMat_string,C);
     CMmat := [[StringToInteger(CMmat[3*i+1]),StringToInteger(CMmat[3*i+2]),StringToInteger(CMmat[3*i+3])] : i in [0..2]];
     if p mod 3 eq 1 then
         lpoly := lift1mod3(p,CMmat);
-        if Type(lpoly) ne MonStgElt then
-            return [<p,lpoly>];
-/*
-        else
-            print p, lpoly;
-*/
+        if Type(lpoly) eq MonStgElt then
+            return "Lpolynomial not computed";
         end if;
+        return [<p,lpoly>];
     end if;
     if p mod 3 eq 2 then
         lpoly := lift2mod3(p,CMmat,C);
-        if Type(lpoly) ne MonStgElt then
-            return [<p,lpoly>];
-/*
-        else
-            print p, lpoly;
-*/
+        if Type(lpoly) eq MonStgElt then
+            return "Lpolynomial not computed";
         end if;
+        return [<p,lpoly>];
     end if;
 end function;
