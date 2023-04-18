@@ -1,32 +1,3 @@
-function Star(P,Q)
-PP<x> := Parent(P); 
-RR<z> := PolynomialRing(PP);
-Qxz := 0;
-for i in [0 .. Degree(Q)]  do
-Qxz +:= Eltseq(Q)[i+1]*z^(Degree(Q)-i)*x^i;
-end for;
-return Resultant(RR!Eltseq(P), Qxz);
-end function;
-
-function StarPower(r,P)
-if r eq 1 then return P; end if;
-Pr := P;
-for i in [2 .. r] do
-Pr := Star(Pr,P);
-end for;
-return Pr;
-end function;
-
-function Bracket(r,P)
-_<x> := Parent(P);
-PrXr := Star(P, x^r-1);
-PrX := 0;
-for i in [0 .. Degree(P)] do
-PrX +:= Eltseq(PrXr)[r*i + 1] * x^i;
-end for;
-return PrX;
-end function;
-
 load "Lpolys.m";
 function getLpol(f,radical_cond,p);
     P<x> := Parent(f);
