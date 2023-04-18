@@ -73,7 +73,7 @@ radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
 return radical_cond;
 end function;
 
-//Input: f is the defining polynomial, i.e., y^3=f and a should generate a prime ideal above a prime congruent to 1 mod 3.
+//Input: f is the defining polynomial, i.e., y^3=f and "a" should generate a prime ideal above a rational prime congruent to 1 mod 3.
 //Output: This outputs the "Billerey Bound",i.e., the analogue to the B_p bound given in Billerey's paper.
 function Bound(f, radical_cond,a)
 p :=Integers()!Norm(a);
