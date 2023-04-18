@@ -73,6 +73,8 @@ radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
 return radical_cond;
 end function;
 
+//Input: f is the defining polynomial, i.e., y^3=f and a should generate a prime ideal above a prime congruent to 1 mod 3.
+//Output: This outputs the "Billerey Bound",i.e., the analogue to the B_p bound given in Billerey's paper.
 function Bound(f, radical_cond,a)
 p :=Integers()!Norm(a);
 assert p mod 3 eq 1 and radical_cond mod p ne 0 and p ge 53;
@@ -81,6 +83,7 @@ Testpol := Bracket(72,Lpol);
 return &*[Evaluate(Testpol, r^(72)): r in {1,a,p,a*p,p^2,a^2}];
 end function;
 
+// Given the defining f, we compute the divisors of the associated "Billerey Bounds" for all primes 1 mod 3 of good reduction in the interval (53,N).
 function PosRedPrimes(f,N)
 radical_cond := RadCond(f);
 As := [];
@@ -92,7 +95,7 @@ As := [];
  Append(~As,a);
  end for;
  end for;
-Bs := [Bound(f,radical_cond,a):a in As];
-return Setseq(Seqset(PrimeFactors(Norm(GCD(Bs))) cat PrimeFactors(radical_cond))); //to catch any primes which may not have semistable reduction.
+Bs := [Integers()!Norm(a) * Bound(f,radical_cond,a):a in As]; // The bound associated to B_p doesn't give us any any information on p.
+return Setseq(Seqset(PrimeFactors(Norm(GCD(Bs))) cat PrimeFactors(radical_cond))); //to catch any primes which may not have semistable reduction. In particular, note that 3 is included here.
 end function;
 
