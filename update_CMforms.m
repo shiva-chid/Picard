@@ -21,8 +21,13 @@ function read_heckepolsdb();
     return hpols;
 end function;
 
-function write_heckepolsdb(hpols);
+function write_heckepolsdb(hpols : dont_duplicate := false);
 //    fil := Open("cmforms_heckepols.txt","w");
+    if dont_duplicate then
+        existing_hpols := read_heckepolsdb();
+        hpols := [x : x in hpols | not x in existing_hpols];
+    end if;
+
     s := "";
     for x in hpols do
         s := s cat IntegerToString(x[1]) cat ":" cat IntegerToString(x[2]) cat ":[";
@@ -182,11 +187,14 @@ function update_CMforms(level : primes_bound := 500, fromCMformsdb := false);
 end function;
 
 
+///////////////////////////////////////////////////////////////////////////////
+
+
 function update_CMforms1(radical_level : primes_bound := 500, fromCMformsdb := false);
     Z := Integers();
     existing_hpols := read_heckepolsdb();
     existing_levels := Sort(SetToSequence({x[1] : x in existing_hpols}));
-    relevant_existing_hpols := [x : x in existing_hpols | radical_level mod Squarefree(x[1]) eq 0];
+    relevant_existing_hpols := [x : x in existing_hpols | radical_level mod &*([1] cat PrimeFactors(x[1])) eq 0];
     if fromCMformsdb then
         return relevant_existing_hpols;
     end if;
@@ -249,5 +257,44 @@ function update_CMforms1(radical_level : primes_bound := 500, fromCMformsdb := f
     hpols := heckepols(good_grosschars,primes_bound);
     boo := write_heckepolsdb(hpols);
     return hpols cat relevant_existing_hpols;
+end function;
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+function allCMforms1(radical_level : primes_bound := 1000);
+    Z := Integers();
+    radical_level_ge5 := Z!(radical_level/(2^Valuation(radical_level,2)*3^Valuation(radical_level,3)));
+
+    F<zeta3> := CyclotomicField(3);
+    zeta6 := zeta3+1;
+    OF := RingOfIntegers(F);
+    DG := DirichletGroup(3*OF);
+    assert #DG eq 6;
+    EDG := Elements(DG);
+    _ := exists(chi){x : x in EDG | x(zeta6) eq zeta6};
+
+    max_cond := radical_level_ge5*OF;
+    if radical_level mod 6 eq 0 then
+        max_cond := 2^4*3^2*max_cond;
+    elif radical_level mod 3 eq 0 then
+        max_cond := 3^2*max_cond;
+    elif radical_level mod 2 eq 0 then
+        max_cond := 2^4*max_cond;
+    end if;
+    printf "Working with the maximum modulus\n%o\n", max_cond;
+    G := HeckeCharacterGroup(max_cond);
+    printf "The Hecke Character Group of this modulus has %o elements\n", #G;
+    good_grosschars := [];
+    for x in Elements(G) do
+        grosschar := Grossencharacter(x,Extend(chi,Modulus(x)),[[1,0]]);
+        grosschar := AssociatedPrimitiveGrossencharacter(grosschar);
+        Append(~good_grosschars,grosschar);
+    end for;
+    printf "Grossencharacters computed. Found %o of them.\n", #good_grosschars;
+    hpols := heckepols(good_grosschars,primes_bound);
+    boo := write_heckepolsdb(hpols : dont_duplicate := true);
+    return hpols;
 end function;
 
