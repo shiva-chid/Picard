@@ -40,40 +40,42 @@ function getLpol(f,radical_cond,p);
 end function;
 
 
-// This is C1test using the Hecke Polynomials computed (and stored) from Grossencharacters
-function C1test(f,radical_cond : cond := 1, primes_bound := 500, fromCMformsdb := false);
-    Z := Integers();
-    P<t> := PolynomialRing(Rationals());
-    if cond eq 1 then
-        cmformsheckepols_alllevels := update_CMforms1(radical_cond : primes_bound := primes_bound, fromCMformsdb := fromCMformsdb);
-    else
-        cmformsheckepols_alllevels := update_CMforms(cond : primes_bound := primes_bound, fromCMformsdb := fromCMformsdb);
-    end if;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    bignum := 0;
-    for p in PrimesUpTo(primes_bound) do
-        if p ge 53 and p mod 3 eq 1 and radical_cond mod p ne 0 then
-            Lpol := getLpol(f,radical_cond,p);
-            if Type(Lpol) eq MonStgElt then
-                continue p;
-            end if;
-            prod_heckepols := &*[P!x[3] : x in cmformsheckepols_alllevels | x[2] eq p];
-            bignum := GCD(bignum,Z!Resultant(Lpol,prod_heckepols));
-//            printf "The latest number bignum, after computing resultants upto primes %o, is %o.\n", p, bignum;
-            if bignum ne 0 and bignum eq 3^(Valuation(bignum,3)) then
-                return [];
-            end if;
-        end if;
-    end for;
 
-    if bignum eq 0 then
-        printf "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
-        return 0;
+function Star(f,g);
+    P<x> := Parent(f); 
+    P2<z> := PolynomialRing(P);
+    g_xz := &+[Coefficient(g,i)*z^(Degree(g)-i)*x^i : i in [0..Degree(g)]];
+    return Resultant(P2!Coefficients(f), g_xz);
+end function;
+
+function Bracket(r,f);
+    P<x> := Parent(f);
+    frXr := Star(f, x^r-1);
+    return &+[Coefficient(frXr,r*i)*x^i : i in [0..Degree(f)]];
+end function;
+
+function RadCond(f);
+    radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
+    radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
+    radical_cond := radical_leadcoeff*radical_disc;
+    if radical_cond mod 3 ne 0 then
+        radical_cond := 3*radical_cond;
     end if;
-/*
-    require bignum ne 0 : "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
-*/
-    return Exclude(PrimeFactors(bignum),3);
+    return radical_cond;
+end function;
+
+//Input: f is the defining polynomial, i.e., y^3=f and "a" should generate a prime ideal of Z[zeta_3] above a rational prime congruent to 1 mod 3.
+//Output: This outputs the "Billerey Bound",i.e., the analogue to the B_p bound given in Billerey's paper.
+function Bound(f,radical_cond,a);
+    p :=Integers()!Norm(a);
+    assert p mod 3 eq 1 and radical_cond mod p ne 0 and p ge 53;
+    Lpol := getLpol(f,radical_cond,p);
+    if Type(Lpol) eq MonStgElt then return Lpol; end if;
+    Testpol := Bracket(72,Lpol);
+    return &*[Evaluate(Testpol,r^72): r in {1,a,p,a*p,p^2,a^2}];
 end function;
 
 
@@ -81,11 +83,48 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C3test(f,radical_cond : cond := 1, primes_bound := 500);
+// Given the defining f, we compute the divisors of the associated "Billerey Bounds" for all primes 1 mod 3 of good reduction in the interval (53,N).
+function C1test(f : radical_cond := 1, primes_bound := 500);
+    Z := Integers();
+    F := CyclotomicField(3);
+    O := RingOfIntegers(F);
+    if radical_cond eq 1 then
+        radical_cond := RadCond(f);
+    end if;
+    As := [];
+    for p in PrimesInInterval(53, primes_bound) do
+        if (p mod 3 ne 1) or (radical_cond mod p eq 0) then continue; end if;
+        Fac := Factorisation(p*O);
+        for pfac in Fac do
+            tf, a := IsPrincipal(pfac[1]);
+            Append(~As,a);
+        end for;
+    end for;
+    Bs := [];
+    for a in As do
+        B := Bound(f,radical_cond,a);
+        if Type(B) eq MonStgElt then continue; end if;
+        Append(~Bs,Z!Norm(a)*B); // The bound associated to B_p doesn't give us any information on p.
+    end for;
+/*
+    return Sort(Setseq(Seqset(PrimeFactors(Norm(GCD(Bs))) cat PrimeFactors(radical_cond)))); //to catch any primes which may not have semistable reduction. In particular, note that 3 is included here.
+*/
+    return PrimeFactors(Norm(GCD(Bs)));
+end function;
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function C3test(f : radical_cond := 1, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
     possibly_nonsurj_primes := [];
-    cubicdirichletchars := cubic_fields(radical_cond : cond := cond);
+    if radical_cond eq 1 then
+        radical_cond := RadCond(f);
+    end if;
+    cubicdirichletchars := cubic_fields(radical_cond);
     for chi in cubicdirichletchars do
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
@@ -132,14 +171,17 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C2test(f,radical_cond : cond := 1, primes_bound := 500);
+function C2test(f : radical_cond := 1, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
-    possibly_nonsurj_primes := C3test(f,radical_cond : cond := cond, primes_bound := primes_bound);
+    if radical_cond eq 1 then
+        radical_cond := RadCond(f);
+    end if;
+    possibly_nonsurj_primes := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound);
     if Type(possibly_nonsurj_primes) eq RngIntElt then
         possibly_nonsurj_primes := [];
     end if;
-    quaddirichletchars := quad_fields(radical_cond : cond := cond);
+    quaddirichletchars := quad_fields(radical_cond);
     for chi in quaddirichletchars do
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
@@ -175,23 +217,17 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /*
-load "PicardConductor.m";
-
 P<x> := PolynomialRing(Integers());
 
 f := x^4-x^2-x+1;
-cond := PicardConductor(f);
-print cond, Factorisation(cond);
-C1test(f,cond);
-C3test(f,cond);
-C2test(f,cond);
+C1test(f);
+C3test(f);
+C2test(f);
 
 f := x^4 - 4*x^3 + 2*x^2 + x + 13;
-cond := PicardConductor(f);
-print cond, Factorisation(cond);
-C1test(f,cond);
-C3test(f,cond);
-C2test(f,cond);
+C1test(f);
+C3test(f);
+C2test(f);
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
