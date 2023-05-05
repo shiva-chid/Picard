@@ -83,7 +83,8 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-// Given the defining f, we compute the divisors of the associated "Billerey Bounds" for all primes 1 mod 3 of good reduction in the interval (53,N).
+// Given the defining f, we compute the divisors of the associated "Billerey Bounds" for all primes
+// 1 mod 3 of good reduction in the interval (53,N).
 function C1test(f : radical_cond := 1, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
