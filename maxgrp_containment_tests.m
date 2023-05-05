@@ -88,29 +88,72 @@ end function;
 function C1test(f : radical_cond := 1, primes_bound := 500);
     Z := Integers();
     F := CyclotomicField(3);
-    O := RingOfIntegers(F);
+    OF := RingOfIntegers(F);
     if radical_cond eq 1 then
         radical_cond := RadCond(f);
     end if;
     As := [];
     for p in PrimesInInterval(53, primes_bound) do
         if (p mod 3 ne 1) or (radical_cond mod p eq 0) then continue; end if;
-        Fac := Factorisation(p*O);
+        Fac := Factorisation(p*OF);
         for pfac in Fac do
             tf, a := IsPrincipal(pfac[1]);
             Append(~As,a);
         end for;
     end for;
-    Bs := [];
+    Bignum := 0;
     for a in As do
         B := Bound(f,radical_cond,a);
         if Type(B) eq MonStgElt then continue; end if;
-        Append(~Bs,Z!Norm(a)*B); // The bound associated to B_p doesn't give us any information on p.
+        Bignum := GCD(Bignum,Norm(a*B)); // The bound associated to B_p doesn't give us any information on p.
+        if Bignum eq 2^Valuation(Bignum,2)*3^Valuation(Bignum,3)*5^Valuation(Bignum,5)*7^Valuation(Bignum,7) then
+            return PrimeFactors(Bignum);
+        end if;
     end for;
+    if Bignum eq 0 then
+        printf "C1test fails.\n";
+        return 0;
+    end if;
+    return PrimeFactors(Bignum);
+end function;
+
+
+
+
+// This is C1test using the Hecke Polynomials computed (and stored) from Grossencharacters
+function C1test_CMforms(f,radical_cond : cond := 1, primes_bound := 500, fromCMformsdb := false);
+    Z := Integers();
+    P<t> := PolynomialRing(Rationals());
+    if cond eq 1 then
+        cmformsheckepols_alllevels := update_CMforms1(radical_cond : primes_bound := primes_bound, fromCMformsdb := fromCMformsdb);
+    else
+        cmformsheckepols_alllevels := update_CMforms(cond : primes_bound := primes_bound, fromCMformsdb := fromCMformsdb);
+    end if;
+
+    bignum := 0;
+    for p in PrimesUpTo(primes_bound) do
+        if p ge 53 and p mod 3 eq 1 and radical_cond mod p ne 0 then
+            Lpol := getLpol(f,radical_cond,p);
+            if Type(Lpol) eq MonStgElt then
+                continue p;
+            end if;
+            prod_heckepols := &*[P!x[3] : x in cmformsheckepols_alllevels | x[2] eq p];
+            bignum := GCD(bignum,Z!Resultant(Lpol,prod_heckepols));
+//            printf "The latest number bignum, after computing resultants upto primes %o, is %o.\n", p, bignum;
+            if bignum ne 0 and bignum eq 3^(Valuation(bignum,3)) then
+                return [];
+            end if;
+        end if;
+    end for;
+
+    if bignum eq 0 then
+        printf "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
+        return 0;
+    end if;
 /*
-    return Sort(Setseq(Seqset(PrimeFactors(Norm(GCD(Bs))) cat PrimeFactors(radical_cond)))); //to catch any primes which may not have semistable reduction. In particular, note that 3 is included here.
+    require bignum ne 0 : "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
 */
-    return PrimeFactors(Norm(GCD(Bs)));
+    return Exclude(PrimeFactors(bignum),3);
 end function;
 
 
