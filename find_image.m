@@ -13,8 +13,7 @@ function getLpol(f,radical_cond,p);
     require radical_cond mod p ne 0 : "Bad Prime";
 */
     pstr := IntegerToString(p);
-    fcoeffs := [IntegerToString(c) : c in Coefficients(f)];
-    fstr := "x^4+" cat fcoeffs[3] cat "x^2+" cat fcoeffs[2] cat "x+" cat fcoeffs[1];
+    fstr := Sprint(f);
 /*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
@@ -34,7 +33,7 @@ function getLpol(f,radical_cond,p);
 /*
     require #Lpol eq 1 : "Error in computing L-polynomial";
 */
-    return Lpol;
+    return P ! Reverse(Lpol[1,2]);
 end function;
 
 function getLpols(f, radical_cond, primesstart, primesend);
