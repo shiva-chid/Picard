@@ -2,12 +2,36 @@ load "Lpolys.m";
 load "quad_cubic_fields.m";
 load "update_CMforms.m";
 
+function suppressed_integer_quartic(f);
+    P<x> := PolynomialRing(Rationals());
+    a4 := Coefficient(f,4);
+    if a4 ne 1 then
+        f := a4^3*Evaluate(f,x/a4);
+    end if;
+
+    a3 := Coefficient(f,3);
+    if a3 ne 0 then
+        f := Evaluate(f,x-a3/4);
+    end if;
+
+    coeffs := Coefficients(f)[1..3];
+    coeffs_dens := [Denominator(x) : x in coeffs];
+    pfacs_dens := &join[Set(PrimeFactors(x)) : x in coeffs_dens];
+    m := (pfacs_dens eq {}) select 1 else &*[p^n where n is Maximum([Ceiling(Valuation(coeffs_dens[i],p)/(15-3*i)) : i in [1..3]]) : p in pfacs_dens];
+
+    P<x> := PolynomialRing(Integers());
+    return P!([m^(15-3*i)*coeffs[i] : i in [1..3]] cat [0,1]);
+end function;
+
 function getLpol(f,radical_cond,p);
+    f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
+/*
     if BaseRing(P) ne Integers() then
         P<x> := PolynomialRing(Integers());
         f := P ! f;
     end if;
+*/
     if radical_cond mod p eq 0 then
         return "Bad Prime";
     end if;
@@ -16,6 +40,7 @@ function getLpol(f,radical_cond,p);
 */
     pstr := IntegerToString(p);
     fstr := Sprint(f);
+    fstr := &cat(Split(fstr," "));
 /*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
@@ -84,7 +109,7 @@ end function;
 
 // Given the defining f, we compute the divisors of the associated "Billerey Bounds" for all primes
 // 1 mod 3 of good reduction in the interval (53,N).
-function C1test(f : radical_cond := 1, primes_bound := 500);
+function C1test(f : radical_cond := 1, primes_bound := 1000);
     Z := Integers();
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
@@ -160,7 +185,7 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C3test(f : radical_cond := 1, primes_bound := 500);
+function C3test(f : radical_cond := 1, primes_bound := 1000);
     Z := Integers();
     F := CyclotomicField(3);
     possibly_nonsurj_primes := [];
@@ -214,16 +239,17 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C2test(f : radical_cond := 1, primes_bound := 500);
+function C2andC3test(f : radical_cond := 1, primes_bound := 1000);
     Z := Integers();
     F := CyclotomicField(3);
     if radical_cond eq 1 then
         radical_cond := RadCond(f);
     end if;
-    possibly_nonsurj_primes := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound);
-    if Type(possibly_nonsurj_primes) eq RngIntElt then
-        possibly_nonsurj_primes := [];
+    C3primes := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound);
+    if Type(C3primes) eq RngIntElt then
+        C3primes := [];
     end if;
+    C2primes := C3primes;
     quaddirichletchars := quad_fields(radical_cond);
     for chi in quaddirichletchars do
         bignum := 0;
@@ -251,9 +277,9 @@ function C2test(f : radical_cond := 1, primes_bound := 500);
             printf "C2test fails.\n";
             return 0;
         end if;
-        possibly_nonsurj_primes := Sort(SetToSequence(Set(possibly_nonsurj_primes cat PrimeFactors(bignum))));
+        C2primes := Sort(SetToSequence(Set(C2primes cat PrimeFactors(bignum))));
     end for;
-    return Exclude(possibly_nonsurj_primes,3);
+    return C3primes, Exclude(C2primes,3);
 end function;
 
 

@@ -72,13 +72,15 @@ function getLpol(f,radical_cond,p);
     return P ! Reverse(Lpol[1,2]);
 end function;
 
-function getLpols(f, cond, primesstart, primesend);
+function getLpols(f, radical_cond, primesstart, primesend);
     P<x> := Parent(f);
     Lpols := [];
     for N := primesstart to primesend do
         p := NthPrime(N);
-        if cond mod p ne 0 then
-            Lpols := Lpols cat getLpol(f,cond,p);
+        if radical_cond mod p ne 0 then
+            Lpolatp := getLpol(f,radical_cond,p);
+            if Type(Lpolatp) eq MonStgElt then continue; end if;
+            Lpols := Lpols cat [<p,Lpolatp>];
         end if;
     end for;
     return Lpols;

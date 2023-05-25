@@ -1,11 +1,16 @@
 load "Lpolys.m";
 
+
+
 function getLpol(f,radical_cond,p);
+    f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
+/*
     if BaseRing(P) ne Integers() then
         P<x> := PolynomialRing(Integers());
         f := P ! f;
     end if;
+*/
     if radical_cond mod p eq 0 then
         return "Bad Prime";
     end if;
@@ -14,6 +19,7 @@ function getLpol(f,radical_cond,p);
 */
     pstr := IntegerToString(p);
     fstr := Sprint(f);
+    fstr := &cat(Split(fstr," "));
 /*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
@@ -44,7 +50,7 @@ function getLpols(f, radical_cond, primesstart, primesend);
         if radical_cond mod p ne 0 then
             Lpolatp := getLpol(f,radical_cond,p);
             if Type(Lpolatp) eq MonStgElt then continue; end if;
-            Lpols := Lpols cat Lpolatp;
+            Lpols := Lpols cat [<p,Lpolatp>];
         end if;
     end for;
     return Lpols;
