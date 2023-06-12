@@ -138,40 +138,40 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
     Z := Integers();
     Z7 := Integers(7);
     P7<T> := PolynomialRing(Z7);
-    Lpols := getLpols(f, radical_cond, primesstart, primesend);
     charpolys := [x[1] : x in charpols];
     charpolsshowingup := [];
     skipfrobdistcalc := false;
-    for i := 1 to #Lpols do
-        if Lpols[i,1] mod 3 ne 1 or Lpols[i,1] mod 7 ne 1 then
-            continue;
-        end if;
-	    charpol := P7 ! Reverse(Lpols[i,2]);
+    for N := primesstart to primesend do
+        p := NthPrime(N);
+        if p mod 3 ne 1 or p mod 7 ne 1 or radical_cond mod p eq 0 then continue; end if;
+        Lpolatp := getLpol(f,radical_cond,p);
+        if Type(Lpolatp) eq MonStgElt then continue; end if;
+	    charpol := P7 ! Lpolatp;
 	    iii := Index(charpolys,charpol);
+        print iii;
 	    list_of_counts[iii] := list_of_counts[iii]+1;
+
         if not iii in charpolsshowingup then
 //		print #possibs, #possible_charpolstats;
             Append(~charpolsshowingup,iii);
             remainingones := [j : j in [1..#possibs] | possible_charpolstats[j,iii] ne 0];
             possibs := possibs[remainingones];
             possible_charpolstats := possible_charpolstats[remainingones];
+/*
             if #possibs eq 1 then
                 skipfrobdistcalc := true;
                 possibilities := possibs;
                 break;
-            elif #possibs eq 0 then
+            end if;
+*/
+            if #possibs eq 0 then
                 skipfrobdistcalc := true;
                 possibilities := [];
                 break;
             end if;
 	    end if;
-
-/*
-	if N mod 100 eq 0 then
-	    print N;
-	end if;
-*/
     end for;
+//    print list_of_counts;
 
     if not skipfrobdistcalc then
         totalprimes := &+list_of_counts;
