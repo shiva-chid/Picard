@@ -1,25 +1,47 @@
 load "Lpolys.m";
 
+function suppressed_integer_quartic(f);
+    P<x> := PolynomialRing(Rationals());
+    a4 := Coefficient(f,4);
+    if a4 ne 1 then
+        f := a4^3*Evaluate(f,x/a4);
+    end if;
 
+    a3 := Coefficient(f,3);
+    if a3 ne 0 then
+        f := Evaluate(f,x-a3/4);
+    end if;
+
+    coeffs := Coefficients(f)[1..3];
+    coeffs_dens := [Denominator(x) : x in coeffs];
+    pfacs_dens := &join[Set(PrimeFactors(x)) : x in coeffs_dens];
+    m := (pfacs_dens eq {}) select 1 else &*[p^n where n is Maximum([Ceiling(Valuation(coeffs_dens[i],p)/(15-3*i)) : i in [1..3]]) : p in pfacs_dens];
+
+    P<x> := PolynomialRing(Integers());
+    return P!([m^(15-3*i)*coeffs[i] : i in [1..3]] cat [0,1]);
+end function;
+
+function RadCond(f);
+    f := suppressed_integer_quartic(f);
+    radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
+    radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
+    radical_cond := radical_leadcoeff*radical_disc;
+    if radical_cond mod 3 ne 0 then
+        radical_cond := 3*radical_cond;
+    end if;
+    return radical_cond;
+end function;
 
 function getLpol(f,radical_cond,p);
     f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
-/*
-    if BaseRing(P) ne Integers() then
-        P<x> := PolynomialRing(Integers());
-        f := P ! f;
-    end if;
-*/
-    if radical_cond mod p eq 0 then
-        return "Bad Prime";
-    end if;
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if radical_cond mod p eq 0 then return "Bad Prime"; end if;
 /*
     require radical_cond mod p ne 0 : "Bad Prime";
 */
     pstr := IntegerToString(p);
-    fstr := Sprint(f);
-    fstr := &cat(Split(fstr," "));
+    fstr := &cat(Split(Sprint(f)," "));
 /*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
@@ -29,43 +51,29 @@ function getLpol(f,radical_cond,p);
     C := Coefficients(f)[1..3];
     cartmanmat := Pipe("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
     Lpol := liftLpoly(cartmanmat,C);
-
-/*
-    print Lpol;
-*/
-    if #Lpol ne 1 then
-        return "Error in computing L-polynomial";
-    end if;
+//    print Lpol;
+    if #Lpol ne 1 then return "Error in computing L-polynomial"; end if;
 /*
     require #Lpol eq 1 : "Error in computing L-polynomial";
 */
     return P ! Reverse(Lpol[1,2]);
 end function;
 
-function getLpols(f, radical_cond, primesstart, primesend);
+function getLpols(f,radical_cond,primesstart,primesend);
+    f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     Lpols := [];
     for N := primesstart to primesend do
         p := NthPrime(N);
-        if radical_cond mod p ne 0 then
-            Lpolatp := getLpol(f,radical_cond,p);
-            if Type(Lpolatp) eq MonStgElt then continue; end if;
-            Lpols := Lpols cat [<p,Lpolatp>];
-        end if;
+        if radical_cond mod p eq 0 then continue; end if;
+        Lpolatp := getLpol(f,radical_cond,p);
+        if Type(Lpolatp) eq MonStgElt then continue; end if;
+        Lpols := Lpols cat [<p,Lpolatp>];
     end for;
     return Lpols;
 end function;
 
-
-function RadCond(f);
-    radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
-    radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
-    radical_cond := radical_leadcoeff*radical_disc;
-    if radical_cond mod 3 ne 0 then
-        radical_cond := 3*radical_cond;
-    end if;
-    return radical_cond;
-end function;
 
 function charpol_dist(H,G : CCs := [], charpols := []);
     if charpols ne [] then
@@ -97,18 +105,18 @@ function charpol_dist(H,G : CCs := [], charpols := []);
             Append(~charpolnumbers,CCs[i,2]);
         else
             n := Index(charpols,f);
-            charpolnumbers[n] := charpolnumbers[n]+CCs[i,2];
+            charpolnumbers[n] +:= CCs[i,2];
         end if;
     end for;
 
     if H eq G then
         return [x/#G : x in charpolnumbers];
     end if;
-    /*
+/*    
     if #H gt 2000 then
         return [#(Set(H) meet Orbit(G,CCs[i][3]))/#H : i in [1..#CCs]];
     end if;
-    */
+*/
     newdist := [0 : j in [1..#charpols]];
     CCH := ConjugacyClasses(H);
     for x in CCH do
@@ -128,13 +136,13 @@ function distinguish(f, poss);
 end function;
 
 Attach("GSp.m");
-/*
-G := GSp(6,7);
-*/
+// G := GSp(6,7);
 G := CSp(6,7);
 load "new_data_7.txt";
 
 function find_image(f, radical_cond, possibs, possible_charpolstats : primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
+    f := suppressed_integer_quartic(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     Z := Integers();
     Z7 := Integers(7);
     P7<T> := PolynomialRing(Z7);
@@ -152,7 +160,6 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
 	    list_of_counts[iii] := list_of_counts[iii]+1;
 
         if not iii in charpolsshowingup then
-//		print #possibs, #possible_charpolstats;
             Append(~charpolsshowingup,iii);
             remainingones := [j : j in [1..#possibs] | possible_charpolstats[j,iii] ne 0];
             possibs := possibs[remainingones];
@@ -176,7 +183,7 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
     if not skipfrobdistcalc then
         totalprimes := &+list_of_counts;
         print totalprimes;
-        freqstat := [list_of_counts[i]/totalprimes : i in [1..#list_of_counts]];
+        freqstat := [x/totalprimes : x in list_of_counts];
 
         V := VectorSpace(RealField(),#charpols);
         localmindists := [];
@@ -281,46 +288,48 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
     end if;
 
 
-
+    f := suppressed_integer_quartic(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     Z := Integers();
     P7<T> := PolynomialRing(Fl);
-    Lpols := getLpols(f, radical_cond, primesstart, primesend);
     charpolsshowingup := [];
     skipcharpoldistcalc := false;
-    for i := 1 to #Lpols do
-        if Lpols[i,1] mod 3 ne 1 or Lpols[i,1] mod l eq 1 then
-            continue;
-        end if;
-	    charpol := P7 ! Reverse(Lpols[i,2]);
+
+    for N := primesstart to primesend do
+        p := NthPrime(N);
+        if p mod 3 ne 1 or p mod 7 eq 1 or radical_cond mod p eq 0 then continue; end if;
+        Lpolatp := getLpol(f,radical_cond,p);
+        if Type(Lpolatp) eq MonStgElt then continue; end if;
+	    charpol := P7 ! Lpolatp;
 	    iii := Index(charpolys,charpol);
+        print iii;
 	    list_of_counts[iii] := list_of_counts[iii]+1;
+
         if not iii in charpolsshowingup then
-//		print #possibs, #possible_charpolstats;
             Append(~charpolsshowingup,iii);
             remainingones := [j : j in [1..#possibs] | possible_charpolstats[j,iii] ne 0];
             possibs := possibs[remainingones];
             possible_charpolstats := possible_charpolstats[remainingones];
+/*
             if #possibs eq 1 then
                 skipcharpoldistcalc := true;
                 possibilities := possibs;
                 break;
-            elif #possibs eq 0 then
+            end if;
+*/
+            if #possibs eq 0 then
                 skipcharpoldistcalc := true;
                 possibilities := [];
                 break;
             end if;
 	    end if;
-/*
-	if N mod 100 eq 0 then
-	    print N;
-	end if;
-*/
     end for;
+//    print list_of_counts;
 
     if not skipcharpoldistcalc then
         totalprimes := &+list_of_counts;
         print totalprimes;
-        freqstat := [list_of_counts[i]/totalprimes : i in [1..#list_of_counts]];
+        freqstat := [x/totalprimes : x in list_of_counts];
 
         V := VectorSpace(RealField(),#charpols);
         localmindists := [];
@@ -350,7 +359,6 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
         print #possibilities, #errors;
         print errors;
     end if;
-
     if #possibilities eq 0 then
         print "No subgroups found";
         return [];
