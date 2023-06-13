@@ -130,7 +130,7 @@ function C1test(f : radical_cond := 1, primes_bound := 1000);
         B := Bound(f,radical_cond,a);
         if Type(B) eq MonStgElt then continue; end if;
         Bignum := GCD(Bignum,Norm(a*B)); // The bound associated to B_p doesn't give us any information on p.
-        if Bignum eq 2^Valuation(Bignum,2)*3^Valuation(Bignum,3)*5^Valuation(Bignum,5)*7^Valuation(Bignum,7) then
+        if Bignum eq 2^Valuation(Bignum,2)*3^Valuation(Bignum,3) then
             return PrimeFactors(Bignum);
         end if;
     end for;
