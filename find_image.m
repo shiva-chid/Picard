@@ -156,7 +156,7 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
         if Type(Lpolatp) eq MonStgElt then continue; end if;
 	    charpol := P7 ! Lpolatp;
 	    iii := Index(charpolys,charpol);
-        print iii;
+//        print iii;
 	    list_of_counts[iii] := list_of_counts[iii]+1;
 
         if not iii in charpolsshowingup then
@@ -234,6 +234,8 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
 end function;
 
 function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := [], possible_charpolstats := [], primesstart := 3, primesend := 10000, list_of_counts := [0/1 : i in [1..#charpols]]);
+    f := suppressed_integer_quartic(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     charpolys := [x[1] : x in charpols];
     Fl := GF(l);
     Ul, il := UnitGroup(Fl);
@@ -271,7 +273,7 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
                 KK := tempsubs[k];
                 bool := true;
                 for ll := 1 to #temp do
-                    if IsConjugate(GL(6,Fl),KK,temp[ll,1]`subgroup) then
+                    if IsConjugate(GL(6,Fl),KK,temp[ll,1]) then
                         temp[ll] := temp[ll] cat [KK];
                         bool := false;
                         break;
@@ -302,7 +304,7 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
         if Type(Lpolatp) eq MonStgElt then continue; end if;
 	    charpol := P7 ! Lpolatp;
 	    iii := Index(charpolys,charpol);
-        print iii;
+//        print iii;
 	    list_of_counts[iii] := list_of_counts[iii]+1;
 
         if not iii in charpolsshowingup then

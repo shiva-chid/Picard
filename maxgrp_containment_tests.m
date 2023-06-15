@@ -193,6 +193,7 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
         radical_cond := RadCond(f);
     end if;
     cubicdirichletchars := cubic_fields(radical_cond);
+//    print cubicdirichletchars;
     for chi in cubicdirichletchars do
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
@@ -201,9 +202,9 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
                 if chi(p) ne 1 then
                     Lpol := getLpol(f,radical_cond,p);
                     if Type(Lpol) ne MonStgElt then
-//                        printf "Using an inert prime in C3test. ";
+//                        printf "Using an inert prime in C3test.\n";
                         newnum := Coefficient(Lpol,5);
-//                        if newnum ne 0 then printf "It has worked.\n"; end if;
+//                        if newnum ne 0 then printf "Inert prime works.\n"; end if;
                         bignum := GCD(bignum,newnum);
                     end if;
                 end if;
@@ -214,11 +215,11 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
                     if Type(Lpol) ne MonStgElt then
                         facs := Factorisation(ChangeRing(Lpol,F));
                         if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
-//                            printf "Using a split prime in C3test. ";
+//                            printf "Using a split prime in C3test.\n";
                             fac1 := facs[1,1];
                             fac2 := facs[2,1];
                             newnum := Z ! (Coefficient(fac1,2)*Coefficient(fac2,2));
-//                            if newnum ne 0 then printf "It has worked.\n"; end if;
+//                            if newnum ne 0 then printf "Split prime works.\n"; end if;
                             bignum := GCD(bignum,newnum);
                         end if;
                     end if;
@@ -228,6 +229,7 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
         if bignum eq 0 then
             printf "C3test fails.\n";
             return 0;
+//            return chi;
         end if;
         possibly_nonsurj_primes := Sort(SetToSequence(Set(possibly_nonsurj_primes cat PrimeFactors(bignum))));
     end for;
