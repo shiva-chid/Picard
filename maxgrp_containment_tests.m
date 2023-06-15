@@ -2,6 +2,7 @@ load "Lpolys.m";
 load "quad_cubic_fields.m";
 load "update_CMforms.m";
 
+
 function suppressed_integer_quartic(f);
     P<x> := PolynomialRing(Rationals());
     a4 := Coefficient(f,4);
@@ -23,24 +24,27 @@ function suppressed_integer_quartic(f);
     return P!([m^(15-3*i)*coeffs[i] : i in [1..3]] cat [0,1]);
 end function;
 
+function RadCond(f);
+    f := suppressed_integer_quartic(f);
+    radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
+    radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
+    radical_cond := radical_leadcoeff*radical_disc;
+    if radical_cond mod 3 ne 0 then
+        radical_cond := 3*radical_cond;
+    end if;
+    return radical_cond;
+end function;
+
 function getLpol(f,radical_cond,p);
     f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
-/*
-    if BaseRing(P) ne Integers() then
-        P<x> := PolynomialRing(Integers());
-        f := P ! f;
-    end if;
-*/
-    if radical_cond mod p eq 0 then
-        return "Bad Prime";
-    end if;
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if radical_cond mod p eq 0 then return "Bad Prime"; end if;
 /*
     require radical_cond mod p ne 0 : "Bad Prime";
 */
     pstr := IntegerToString(p);
-    fstr := Sprint(f);
-    fstr := &cat(Split(fstr," "));
+    fstr := &cat(Split(Sprint(f)," "));
 /*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
@@ -50,19 +54,13 @@ function getLpol(f,radical_cond,p);
     C := Coefficients(f)[1..3];
     cartmanmat := Pipe("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
     Lpol := liftLpoly(cartmanmat,C);
-
-/*
-    print Lpol;
-*/
-    if #Lpol ne 1 then
-        return "Error in computing L-polynomial";
-    end if;
+//    print Lpol;
+    if #Lpol ne 1 then return "Error in computing L-polynomial"; end if;
 /*
     require #Lpol eq 1 : "Error in computing L-polynomial";
 */
     return P ! Reverse(Lpol[1,2]);
 end function;
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,16 +77,6 @@ function Bracket(r,f);
     P<x> := Parent(f);
     frXr := Star(f, x^r-1);
     return &+[Coefficient(frXr,r*i)*x^i : i in [0..Degree(f)]];
-end function;
-
-function RadCond(f);
-    radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
-    radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
-    radical_cond := radical_leadcoeff*radical_disc;
-    if radical_cond mod 3 ne 0 then
-        radical_cond := 3*radical_cond;
-    end if;
-    return radical_cond;
 end function;
 
 //Input: f is the defining polynomial, i.e., y^3=f and "a" should generate a prime ideal of Z[zeta_3] above a rational prime congruent to 1 mod 3.
