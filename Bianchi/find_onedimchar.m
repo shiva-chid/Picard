@@ -34,22 +34,48 @@ function getLpols(f, cond, primesstart, primesend);
 end function;
 */
 
+function suppressed_integer_quartic(f);
+    P<x> := PolynomialRing(Rationals());
+    a4 := Coefficient(f,4);
+    if a4 ne 1 then
+        f := a4^3*Evaluate(f,x/a4);
+    end if;
 
+    a3 := Coefficient(f,3);
+    if a3 ne 0 then
+        f := Evaluate(f,x-a3/4);
+    end if;
+
+    coeffs := Coefficients(f)[1..3];
+    coeffs_dens := [Denominator(x) : x in coeffs];
+    pfacs_dens := &join[Set(PrimeFactors(x)) : x in coeffs_dens];
+    m := (pfacs_dens eq {}) select 1 else &*[p^n where n is Maximum([Ceiling(Valuation(coeffs_dens[i],p)/(15-3*i)) : i in [1..3]]) : p in pfacs_dens];
+
+    P<x> := PolynomialRing(Integers());
+    return P!([m^(15-3*i)*coeffs[i] : i in [1..3]] cat [0,1]);
+end function;
+
+function RadCond(f);
+    f := suppressed_integer_quartic(f);
+    radical_disc := &*([1] cat [p : p in PrimeFactors(Discriminant(f))]);
+    radical_leadcoeff := &*([1] cat [p : p in PrimeFactors(Coefficient(f,4))]);
+    radical_cond := radical_leadcoeff*radical_disc;
+    if radical_cond mod 3 ne 0 then
+        radical_cond := 3*radical_cond;
+    end if;
+    return radical_cond;
+end function;
 
 function getLpol(f,radical_cond,p);
+    f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
-    if BaseRing(P) ne Integers() then
-        P<x> := PolynomialRing(Integers());
-        f := P ! f;
-    end if;
-    if radical_cond mod p eq 0 then
-        return "Bad Prime";
-    end if;
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if radical_cond mod p eq 0 then return "Bad Prime"; end if;
 /*
     require radical_cond mod p ne 0 : "Bad Prime";
 */
     pstr := IntegerToString(p);
-    fstr := Sprint(f);
+    fstr := &cat(Split(Sprint(f)," "));
 /*
     System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
@@ -59,29 +85,25 @@ function getLpol(f,radical_cond,p);
     C := Coefficients(f)[1..3];
     cartmanmat := Pipe("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
     Lpol := liftLpoly(cartmanmat,C);
-
-/*
-    print Lpol;
-*/
-    if #Lpol ne 1 then
-        return "Error in computing L-polynomial";
-    end if;
+//    print Lpol;
+    if #Lpol ne 1 then return "Error in computing L-polynomial"; end if;
 /*
     require #Lpol eq 1 : "Error in computing L-polynomial";
 */
     return P ! Reverse(Lpol[1,2]);
 end function;
 
-function getLpols(f, radical_cond, primesstart, primesend);
+function getLpols(f,radical_cond,primesstart,primesend);
+    f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     Lpols := [];
     for N := primesstart to primesend do
         p := NthPrime(N);
-        if radical_cond mod p ne 0 then
-            Lpolatp := getLpol(f,radical_cond,p);
-            if Type(Lpolatp) eq MonStgElt then continue; end if;
-            Lpols := Lpols cat [<p,Lpolatp>];
-        end if;
+        if radical_cond mod p eq 0 then continue; end if;
+        Lpolatp := getLpol(f,radical_cond,p);
+        if Type(Lpolatp) eq MonStgElt then continue; end if;
+        Lpols := Lpols cat [<p,Lpolatp>];
     end for;
     return Lpols;
 end function;
