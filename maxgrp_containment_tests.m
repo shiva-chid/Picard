@@ -1,6 +1,5 @@
 load "Lpolys.m";
 load "quad_cubic_fields.m";
-load "update_CMforms.m";
 
 
 function suppressed_integer_quartic(f);
@@ -131,7 +130,7 @@ end function;
 
 
 
-
+/*
 // This is C1test using the Hecke Polynomials computed (and stored) from Grossencharacters
 function C1test_CMforms(f,radical_cond : cond := 1, primes_bound := 500, fromCMformsdb := false);
     Z := Integers();
@@ -162,12 +161,12 @@ function C1test_CMforms(f,radical_cond : cond := 1, primes_bound := 500, fromCMf
         printf "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
         return 0;
     end if;
-/*
-    require bignum ne 0 : "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
-*/
+
+//    require bignum ne 0 : "The resultant of charpol(rho_ell(Frob_p)) and the Hecke polynomials of CM cusp forms is 0 for all split primes up to %o.\n", primes_bound;
+
     return Exclude(PrimeFactors(bignum),3);
 end function;
-
+*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,7 +180,7 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
         radical_cond := RadCond(f);
     end if;
     cubicdirichletchars := cubic_fields(radical_cond);
-//    print cubicdirichletchars;
+//    print #cubicdirichletchars;
     for chi in cubicdirichletchars do
         bignum := 0;
         for p in PrimesUpTo(primes_bound) do
@@ -194,6 +193,7 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
                         newnum := Coefficient(Lpol,5);
 //                        if newnum ne 0 then printf "Inert prime works.\n"; end if;
                         bignum := GCD(bignum,newnum);
+                        if bignum eq 1 then break; end if;
                     end if;
                 end if;
             elif p mod 3 eq 1 then
@@ -209,6 +209,7 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
                             newnum := Z ! (Coefficient(fac1,2)*Coefficient(fac2,2));
 //                            if newnum ne 0 then printf "Split prime works.\n"; end if;
                             bignum := GCD(bignum,newnum);
+                            if bignum eq 1 then break; end if;
                         end if;
                     end if;
                 end if;
@@ -258,6 +259,7 @@ function C2andC3test(f : radical_cond := 1, primes_bound := 1000);
                             newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
 //                            if newnum ne 0 then printf "It has worked.\n"; end if;
                             bignum := GCD(bignum,newnum);
+                            if bignum eq 1 then break; end if;
                         end if;
                     end if;
                 end if;

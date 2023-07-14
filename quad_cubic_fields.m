@@ -1,23 +1,39 @@
 function quad_fields(radical_cond);
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
-    G := HeckeCharacterGroup(4*3*radical_cond*OF : Target := F);
+    G := HeckeCharacterGroup(4*3*radical_cond*OF : Target := CyclotomicField(1));
 //    G := TargetRestriction(G,CyclotomicField(1));
-    EG := [x : x in Elements(G) | Order(x) eq 2];
-    return EG;
+//    EG := [x : x in Elements(G) | Order(x) eq 2];
+//    return EG;
+    return Exclude(Elements(G),G!1);
 end function;
 
 function cubic_fields(radical_cond);
+    Z := Integers();
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
     G := HeckeCharacterGroup(4*3*radical_cond*OF : Target := F);
 //    G := TargetRestriction(G,F);
-    EG := [x : x in Elements(G) | Order(x) eq 3];
-    EG_prune := {};
-    for x in EG do
-        Include(~EG_prune,{x,x^-1});
+//    EG := {{x,x^-1} : x in Elements(G) | Order(x) eq 3};
+//    return [Random(x) : x in EG];
+    n := #Generators(G);
+    H := sub<G|[G.i^ExactQuotient(Order(G.i),3) : i in [1..n] | Order(G.i) mod 3 eq 0]>;
+    n := #Generators(H);
+    assert #H eq 3^n;
+    PV := ProjectiveSpace(GF(3),n-1);
+    PVPoints := RationalPoints(PV);
+    cubicflds := [];
+    for v in PVPoints do
+        Append(~cubicflds,&*[(v[i] ne 0) select H.i^(Z!v[i]) else H!1 : i in [1..n]]);
     end for;
-    return [Random(x) : x in EG_prune];
+    return cubicflds;
+/*
+    EH := Exclude(Elements(H),H!1);
+    for i := 1 to ExactQuotient(3^n-1,2) do
+        Exclude(~EH,EH[i]^-1);
+    end for;
+    return EH;
+*/
 end function;
 
 /*

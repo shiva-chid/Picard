@@ -138,6 +138,7 @@ function subs_of_maxsub(G,H,K,ZH,maptoGl,l);
         end if;
 */
     else
+//        return [];
         ZK := Subgroups(K);
         printf "This maximal subgroup has %o subgroups upto conjugacy in it\nChecking for conjugacy in G = GSp(6,%o)...\n", #ZK, l;
         return uptoGconjugacy(G,ZK);
@@ -173,7 +174,7 @@ function precomputation_splitcase(l);
     idmat := IdentityMatrix(Fl,3);
     antidiagidmat := Matrix(Fl,3,3,[[i+j eq 4 select 1 else 0 : j in [1..3]] : i in [1..3]]);
     permmat := GL(6,Fl) ! DirectSum(idmat,antidiagidmat);
-    GlinjH := hom<Gl -> G |[permmat*BlockMatrix(2,2,[a,zeromat,zeromat,Transpose(a^-1)])*permmat^-1 : a in Generators(Gl)]>;
+    GlinjH := hom<Gl -> G |[permmat*BlockMatrix(2,2,[Gl.i,zeromat,zeromat,Transpose(Gl.i^-1)])*permmat^-1 : i in [1..#Generators(Gl)]]>;
     assert #Kernel(GlinjH) eq 1;
     H := GlinjH(Gl);
     assert #H eq #Gl;
