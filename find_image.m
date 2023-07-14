@@ -43,13 +43,13 @@ function getLpol(f,radical_cond,p);
     pstr := IntegerToString(p);
     fstr := &cat(Split(Sprint(f)," "));
 /*
-    System("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
+    System(GetEnv("HOME") cat "/hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1 > CartManmat_for_p.txt");
     fil := Open("CartManmat_for_p.txt", "r");
     C := Coefficients(f)[1..3];
     Lpol := liftLpolys(fil,C);
 */
     C := Coefficients(f)[1..3];
-    cartmanmat := Pipe("hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
+    cartmanmat := Pipe(GetEnv("HOME") cat "/hwlpoly y^3=" cat fstr cat " " cat pstr cat " 1","");
     Lpol := liftLpoly(cartmanmat,C);
 //    print Lpol;
     if #Lpol ne 1 then return "Error in computing L-polynomial"; end if;
@@ -182,7 +182,7 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
 
     if not skipfrobdistcalc then
         totalprimes := &+list_of_counts;
-        print totalprimes;
+//        print totalprimes;
         freqstat := [x/totalprimes : x in list_of_counts];
 
         V := VectorSpace(RealField(),#charpols);
@@ -196,22 +196,22 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
             end for;
             Append(~localmindists,mindist/4);
         end for;
-        print localmindists;
+//        print localmindists;
 
         possibilities := [];
         errors := [];
         for i := 1 to #possible_charpolstats do
             charpolstatH := possible_charpolstats[i];
             err := V ! charpolstatH - V ! freqstat;
-            print i, Norm(err), localmindists[i];
+//            print i, Norm(err), localmindists[i];
             if Norm(err) lt localmindists[i] then
                 Append(~possibilities,possibs[i]);
                 Append(~errors,Norm(err));
             end if;
         end for;
 
-        print #possibilities, #errors;
-        print errors;
+//        print #possibilities, #errors;
+//        print errors;
     end if;
     if #possibilities eq 0 then
         print "No subgroups found";
@@ -223,8 +223,8 @@ function find_image(f, radical_cond, possibs, possible_charpolstats : primesstar
         newprimesend := primesend + 1000;
         return find_image(f, radical_cond, possibs, possible_charpolstats : primesstart := newprimesstart, primesend := newprimesend, list_of_counts := list_of_counts);
     elif #possibilities[1] gt 1 then
-        print "Sampled data about frobenius cannot distinguish the image upto GL conjugacy uniquely.";
-        print "The image could be one of the following subgroups:";
+//        print "Sampled data about frobenius cannot distinguish the image upto GL conjugacy uniquely.";
+        printf "The image could be one of the following %o subgroups:\n", #possibilities[1];
     //	print possibilities[1];
     //	print "Looking at global data to distinguish between the", #possibilities[1], "possible images...";
         return distinguish(f,possibilities[1]);
@@ -330,7 +330,7 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
 
     if not skipcharpoldistcalc then
         totalprimes := &+list_of_counts;
-        print totalprimes;
+//        print totalprimes;
         freqstat := [x/totalprimes : x in list_of_counts];
 
         V := VectorSpace(RealField(),#charpols);
@@ -344,22 +344,22 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
             end for;
             Append(~localmindists,mindist/4);
         end for;
-        print localmindists;
+//        print localmindists;
 
         possibilities := [];
         errors := [];
         for i := 1 to #possible_charpolstats do
             charpolstatH := possible_charpolstats[i];
             err := V ! charpolstatH - V ! freqstat;
-            print i, Norm(err), localmindists[i];
+//            print i, Norm(err), localmindists[i];
             if Norm(err) lt localmindists[i] then
                 Append(~possibilities,possibs[i]);
                 Append(~errors,Norm(err));
             end if;
         end for;
 
-        print #possibilities, #errors;
-        print errors;
+//        print #possibilities, #errors;
+//        print errors;
     end if;
     if #possibilities eq 0 then
         print "No subgroups found";
@@ -371,8 +371,8 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
         newprimesend := primesend + 1000;
         return lifttoQzeta3(f, K, H, G, CCs, charpols, l : possibs := possibs, possible_charpolstats := possible_charpolstats, primesstart := newprimesstart, primesend := newprimesend, list_of_counts := list_of_counts);
     elif #possibilities[1] gt 1 then
-        print "Sampled data about frobenius charpols cannot distinguish the image upto GL conjugacy uniquely.";
-        print "The image could be one of the following subgroups:";
+//        print "Sampled data about frobenius charpols cannot distinguish the image upto GL conjugacy uniquely.";
+        printf "The image could be one of the following %o subgroups:\n", #possibilities[1];
     //	print possibilities[1];
     //	print "Looking at global data to distinguish between the", #possibilities[1], "possible images...";
         return distinguish(K,possibilities[1]);
@@ -381,24 +381,30 @@ function lifttoQzeta3(f, radical_cond, K, H, G, CCs, charpols, l : possibs := []
     end if;
 end function;
 
+function mod_ell_image(f,ell : radical_cond := 1, type := "all");
+    // i = 4 for reducible, 1 for field-extension, 3 for imprimitive, 2 for exceptional
+
+    f := suppressed_integer_quartic(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+
+    if type eq "reducible" then
+        return find_image(f,radical_cond,subs_with_charpolstat_GLconjinfo[4],all_charpolstats[4]);
+    elif type eq "field_extension" then
+        return find_image(f,radical_cond,subs_with_charpolstat_GLconjinfo[1],all_charpolstats[1]);
+    elif type eq "imprimitive" then
+        return find_image(f,radical_cond,subs_with_charpolstat_GLconjinfo[3],all_charpolstats[3]);
+    elif type eq "exceptional" then
+        return find_image(f,radical_cond,subs_with_charpolstat_GLconjinfo[2],all_charpolstats[2]);
+    end if;
+    for i := 1 to 4 do
+        image := find_image(f,radical_cond,subs_with_charpolstat_GLconjinfo[i],all_charpolstats[i]);
+        if image ne [] then
+            return image;
+        end if;
+    end for;
+end function;
+
 Z := Integers();
 P<x> := PolynomialRing(Z);
 
-/*
-f := x^4+x^2+1;
-radical_cond := RadCond(f);
-for i := 1 to 4 do
-    mod7img_overQzeta21 := find_image(f,radical_cond,subs_with_charpolstat_GLconjinfo[i],all_charpolstats[i]);
-    if mod7img_overQzeta21 ne [] then
-        if #mod7img_overQzeta21 eq 1 then
-            K := mod7img_overQzeta21[1]`subgroup;
-            if BaseRing(K) eq Integers(7) then
-                K := ChangeRing(K,GF(7));
-            end if;
-            mod7img_overQzeta3 := lifttoQzeta3(f,radical_cond,K,H,G,CCs,charpols,7);
-            print mod7img_overQzeta3;
-        end if;
-    end if;
-end for;
-*/
 
