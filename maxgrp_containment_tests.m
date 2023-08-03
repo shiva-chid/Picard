@@ -34,7 +34,7 @@ function RadCond(f);
     return radical_cond;
 end function;
 
-function getLpol(f,radical_cond,p);
+function getLpol(f,p : radical_cond := 1);
     f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
@@ -61,6 +61,22 @@ function getLpol(f,radical_cond,p);
     return P ! Reverse(Lpol[1,2]);
 end function;
 
+function getLpols(f : radical_cond := 1, primesstart := 3, primesend := 1000);
+    f := suppressed_integer_quartic(f);
+    P<x> := Parent(f);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    Lpols := [];
+    for N := primesstart to primesend do
+        p := NthPrime(N);
+        if radical_cond mod p eq 0 then continue; end if;
+        Lpolatp := getLpol(f,p : radical_cond := radical_cond);
+        if Type(Lpolatp) eq MonStgElt then continue; end if;
+        Lpols := Lpols cat [<p,Lpolatp>];
+    end for;
+    return Lpols;
+end function;
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -80,11 +96,9 @@ end function;
 
 //Input: f is the defining polynomial, i.e., y^3=f and "a" should generate a prime ideal of Z[zeta_3] above a rational prime congruent to 1 mod 3.
 //Output: This outputs the "Billerey Bound",i.e., the analogue to the B_p bound given in Billerey's paper.
-function Bound(f,radical_cond,a);
-    p :=Integers()!Norm(a);
-    assert p mod 3 eq 1 and radical_cond mod p ne 0 and p ge 53;
-    Lpol := getLpol(f,radical_cond,p);
-    if Type(Lpol) eq MonStgElt then return Lpol; end if;
+function Bound(f,pandLpol,a);
+    p := pandLpol[1];
+    Lpol := pandLpol[2];
     Testpol := Bracket(72,Lpol);
     return &*[Evaluate(Testpol,r^72): r in {1,a,p,a*p,p^2,a^2}];
 end function;
@@ -96,30 +110,27 @@ end function;
 
 // Given the defining f, we compute the divisors of the associated "Billerey Bounds" for all primes
 // 1 mod 3 of good reduction in the interval (53,N).
-function C1test(f : radical_cond := 1, primes_bound := 1000);
+function C1test(f : radical_cond := 1, primes_bound := 1000, Lpols := []);
     Z := Integers();
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
-    if radical_cond eq 1 then
-        radical_cond := RadCond(f);
-    end if;
-    As := [];
-    for p in PrimesInInterval(53, primes_bound) do
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if Lpols eq [] then Lpols := getLpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
+    Bignum := 0;
+    for pandLpol in Lpols do
+        p := pandLpol[1];
+        Lpol := pandLpol[2];
         if (p mod 3 ne 1) or (radical_cond mod p eq 0) then continue; end if;
         Fac := Factorisation(p*OF);
         for pfac in Fac do
             tf, a := IsPrincipal(pfac[1]);
-            Append(~As,a);
+            B := Bound(f,pandLpol,a);
+            if Type(B) eq MonStgElt then continue; end if;
+            Bignum := GCD(Bignum,Norm(a*B)); // The bound associated to B_p doesn't give us any information on p.
+            if Bignum eq 2^Valuation(Bignum,2)*3^Valuation(Bignum,3) then
+                return PrimeFactors(Bignum);
+            end if;
         end for;
-    end for;
-    Bignum := 0;
-    for a in As do
-        B := Bound(f,radical_cond,a);
-        if Type(B) eq MonStgElt then continue; end if;
-        Bignum := GCD(Bignum,Norm(a*B)); // The bound associated to B_p doesn't give us any information on p.
-        if Bignum eq 2^Valuation(Bignum,2)*3^Valuation(Bignum,3) then
-            return PrimeFactors(Bignum);
-        end if;
     end for;
     if Bignum eq 0 then
         printf "C1test fails.\n";
@@ -144,7 +155,7 @@ function C1test_CMforms(f,radical_cond : cond := 1, primes_bound := 500, fromCMf
     bignum := 0;
     for p in PrimesUpTo(primes_bound) do
         if p ge 53 and p mod 3 eq 1 and radical_cond mod p ne 0 then
-            Lpol := getLpol(f,radical_cond,p);
+            Lpol := getLpol(f,p : radical_cond := radical_cond);
             if Type(Lpol) eq MonStgElt then
                 continue p;
             end if;
@@ -172,45 +183,40 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C3test(f : radical_cond := 1, primes_bound := 1000);
+function C3test(f : radical_cond := 1, primes_bound := 1000, Lpols := []);
     Z := Integers();
     F := CyclotomicField(3);
-    possibly_nonsurj_primes := [];
-    if radical_cond eq 1 then
-        radical_cond := RadCond(f);
-    end if;
+    C3primes := [];
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     cubicdirichletchars := cubic_fields(radical_cond);
 //    print #cubicdirichletchars;
+    if Lpols eq [] then Lpols := getLpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
     for chi in cubicdirichletchars do
         bignum := 0;
-        for p in PrimesUpTo(primes_bound) do
+        for pandLpol in Lpols do
+            p := pandLpol[1];
+            Lpol := pandLpol[2];
             if radical_cond mod p eq 0 then continue; end if;
             if p ne 2 and p mod 3 eq 2 then
                 if chi(p) ne 1 then
-                    Lpol := getLpol(f,radical_cond,p);
-                    if Type(Lpol) ne MonStgElt then
-//                        printf "Using an inert prime in C3test.\n";
-                        newnum := Coefficient(Lpol,5);
-//                        if newnum ne 0 then printf "Inert prime works.\n"; end if;
-                        bignum := GCD(bignum,newnum);
-                        if bignum eq 1 then break; end if;
-                    end if;
+//                    printf "Using an inert prime in C3test.\n";
+                    newnum := Coefficient(Lpol,5);
+//                    if newnum ne 0 then printf "Inert prime works.\n"; end if;
+                    bignum := GCD(bignum,newnum);
+                    if bignum eq 1 then break; end if;
                 end if;
             elif p mod 3 eq 1 then
                 pfacs := PrimeIdealsOverPrime(F,p);
                 if chi(pfacs[1]) ne 1 and chi(pfacs[2]) ne 1 then
-                    Lpol := getLpol(f,radical_cond,p);
-                    if Type(Lpol) ne MonStgElt then
-                        facs := Factorisation(ChangeRing(Lpol,F));
-                        if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
-//                            printf "Using a split prime in C3test.\n";
-                            fac1 := facs[1,1];
-                            fac2 := facs[2,1];
-                            newnum := Z ! (Coefficient(fac1,2)*Coefficient(fac2,2));
-//                            if newnum ne 0 then printf "Split prime works.\n"; end if;
-                            bignum := GCD(bignum,newnum);
-                            if bignum eq 1 then break; end if;
-                        end if;
+                    facs := Factorisation(ChangeRing(Lpol,F));
+                    if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
+//                        printf "Using a split prime in C3test.\n";
+                        fac1 := facs[1,1];
+                        fac2 := facs[2,1];
+                        newnum := Z ! (Coefficient(fac1,2)*Coefficient(fac2,2));
+//                        if newnum ne 0 then printf "Split prime works.\n"; end if;
+                        bignum := GCD(bignum,newnum);
+                        if bignum eq 1 then break; end if;
                     end if;
                 end if;
             end if;
@@ -220,9 +226,9 @@ function C3test(f : radical_cond := 1, primes_bound := 1000);
             return 0;
 //            return chi;
         end if;
-        possibly_nonsurj_primes := Sort(SetToSequence(Set(possibly_nonsurj_primes cat PrimeFactors(bignum))));
+        C3primes := Sort(SetToSequence(Set(C3primes cat PrimeFactors(bignum))));
     end for;
-    return Exclude(possibly_nonsurj_primes,3);
+    return Exclude(C3primes,3);
 end function;
 
 
@@ -230,13 +236,12 @@ end function;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function C2andC3test(f : radical_cond := 1, primes_bound := 1000);
+function C2andC3test(f : radical_cond := 1, primes_bound := 1000, Lpols := []);
     Z := Integers();
     F := CyclotomicField(3);
-    if radical_cond eq 1 then
-        radical_cond := RadCond(f);
-    end if;
-    C3primes := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if Lpols eq [] then Lpols := getLpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
+    C3primes := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound, Lpols := Lpols);
     if Type(C3primes) eq RngIntElt then
         C3primes := [];
     end if;
@@ -244,23 +249,22 @@ function C2andC3test(f : radical_cond := 1, primes_bound := 1000);
     quaddirichletchars := quad_fields(radical_cond);
     for chi in quaddirichletchars do
         bignum := 0;
-        for p in PrimesUpTo(primes_bound) do
+        for pandLpol in Lpols do
+            p := pandLpol[1];
+            Lpol := pandLpol[2];
             if radical_cond mod p eq 0 then continue; end if;
             if p mod 3 eq 1 then
                 pfacs := PrimeIdealsOverPrime(F,p);
                 if chi(pfacs[1]) ne 1 and chi(pfacs[2]) ne 1 then
-                    Lpol := getLpol(f,radical_cond,p);
-                    if Type(Lpol) ne MonStgElt then
-                        facs := Factorisation(ChangeRing(Lpol,F));
-                        if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
-//                            printf "Using a split prime in C2test. ";
-                            fac1 := facs[1,1];
-                            fac2 := facs[2,1];
-                            newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
-//                            if newnum ne 0 then printf "It has worked.\n"; end if;
-                            bignum := GCD(bignum,newnum);
-                            if bignum eq 1 then break; end if;
-                        end if;
+                    facs := Factorisation(ChangeRing(Lpol,F));
+                    if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
+//                        printf "Using a split prime in C2test. ";
+                        fac1 := facs[1,1];
+                        fac2 := facs[2,1];
+                        newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
+//                        if newnum ne 0 then printf "It has worked.\n"; end if;
+                        bignum := GCD(bignum,newnum);
+                        if bignum eq 1 then break; end if;
                     end if;
                 end if;
             end if;
