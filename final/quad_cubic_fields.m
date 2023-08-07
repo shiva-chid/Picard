@@ -6,7 +6,7 @@ intrinsic quad_fields(radical_cond :: RngIntElt) -> SeqEnum
     return Exclude(Elements(G),G!1);
 end intrinsic;
 
-intrinsic cubic_fields(radical_cond :: RngIntElt) -> SeqEnum
+intrinsic cubic_fields(radical_cond :: RngIntElt : noduplicates := true) -> SeqEnum
 {returns a sequence of order-3 Hecke characters of Q(zeta_3), generating cubic extensions of Q(zeta_3) unramified outside the given number}
     Z := Integers();
     F := CyclotomicField(3);
@@ -16,11 +16,14 @@ intrinsic cubic_fields(radical_cond :: RngIntElt) -> SeqEnum
     H := sub<G|[G.i^ExactQuotient(Order(G.i),3) : i in [1..n] | Order(G.i) mod 3 eq 0]>;
     n := #Generators(H);
     assert #H eq 3^n;
-    PV := ProjectiveSpace(GF(3),n-1);
-    PVPoints := RationalPoints(PV);
-    cubicflds := [];
-    for v in PVPoints do
-        Append(~cubicflds,&*[(v[i] ne 0) select H.i^(Z!v[i]) else H!1 : i in [1..n]]);
-    end for;
-    return cubicflds;
+    if noduplicates then
+        PV := ProjectiveSpace(GF(3),n-1);
+        PVPoints := RationalPoints(PV);
+        cubicflds := [];
+        for v in PVPoints do
+            Append(~cubicflds,&*[(v[i] ne 0) select H.i^(Z!v[i]) else H!1 : i in [1..n]]);
+        end for;
+        return cubicflds;
+    end if;
+    return H;
 end intrinsic;

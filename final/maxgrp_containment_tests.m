@@ -150,27 +150,39 @@ for various primes.}
     OF := RingOfIntegers(F);
     C3primes := [];
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
-    cubicdirichletchars := cubic_fields(radical_cond);
-//    print #cubicdirichletchars;
     if charpols eq [] then charpols := getcharpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
-    for chi in cubicdirichletchars do
+    charpols := [x : x in charpols | x[1] gt 3];
+    factored_charpols := [(x[1] mod 3 eq 1) select <x[1],Factorisation(ChangeRing(x[2],F))> else <x[1],[]> : x in charpols];
+    primes_F := [(x[1] mod 3 eq 1) select PrimeIdealsOverPrime(F,x[1]) else [x[1]*OF] : x in charpols];
+
+    CubicHeckeG := cubic_fields(radical_cond : noduplicates := false);
+//    print #CubicHeckeG;
+    gens_CHG := [CubicHeckeG.i : i in [1..#Generators(CubicHeckeG)]];
+    RCl, pi := RayClassGroup(Modulus(CubicHeckeG));
+    matrix_of_vals := [[gens_CHG[j](pi(RCl.i)) : i in [1..#Generators(RCl)]] : j in [1..#gens_CHG]];
+    genvals := [[[&*[(v[i] ne 0) select matrix_of_vals[j,i]^v[i] else 1 : i in [1..#v]] where v is Eltseq(x @@ pi) : x in p] : p in primes_F] : j in [1..#gens_CHG]];
+    n := #gens_CHG;
+    PV := ProjectiveSpace(GF(3),n-1);
+    PVPoints := RationalPoints(PV);
+    for v in PVPoints do
         bignum := 0;
-        for pandcharpol in charpols do
-            p := pandcharpol[1];
-            charpol := pandcharpol[2];
-//            if radical_cond mod p eq 0 then continue; end if;
-            if p ne 2 and p mod 3 eq 2 then
-                if chi(p) ne 1 then
+        for i := 1 to #charpols do
+            p := primes_F[i];
+            charpol := charpols[i,2];
+            facs := factored_charpols[i,2];
+            if #p eq 1 then
+                chivalatp := &*[(v[j] ne 0) select genvals[j,i,1]^(Z!v[j]) else 1 : j in [1..n]];
+                if chivalatp ne 1 then
 //                    printf "Using an inert prime in C3test.\n";
                     newnum := Coefficient(charpol,5);
 //                    if newnum ne 0 then printf "Inert prime works.\n"; end if;
                     bignum := GCD(bignum,newnum);
                     if bignum eq 1 then break; end if;
                 end if;
-            elif p mod 3 eq 1 then
-                pfacs := Factorisation(p*OF);
-                if chi(pfacs[1,1]) ne 1 and chi(pfacs[2,1]) ne 1 then
-                    facs := Factorisation(ChangeRing(charpol,F));
+            elif #p eq 2 then
+                chivalatp1 := &*[(v[j] ne 0) select genvals[j,i,1]^(Z!v[j]) else 1 : j in [1..n]];
+                chivalatp2 := &*[(v[j] ne 0) select genvals[j,i,2]^(Z!v[j]) else 1 : j in [1..n]];
+                if chivalatp1 ne 1 and chivalatp2 ne 1 then
                     if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
 //                        printf "Using a split prime in C3test.\n";
                         fac1 := facs[1,1];
@@ -217,27 +229,26 @@ for various primes.}
         C3primes := [];
         require C3primes ne [] : "C3test fails.";
     end try;
+
     C2primes := C3primes;
+    factored_charpols := [<x[1],Factorisation(ChangeRing(x[2],F))> : x in charpols | x[1] mod 3 eq 1];
+    primes_F := [PrimeIdealsOverPrime(F,x[1]) : x in factored_charpols];
     quaddirichletchars := quad_fields(radical_cond);
     for chi in quaddirichletchars do
         bignum := 0;
-        for pandcharpol in charpols do
-            p := pandcharpol[1];
-            charpol := pandcharpol[2];
-//            if radical_cond mod p eq 0 then continue; end if;
-            if p mod 3 eq 1 then
-                pfacs := Factorisation(p*OF);
-                if chi(pfacs[1,1]) ne 1 and chi(pfacs[2,1]) ne 1 then
-                    facs := Factorisation(ChangeRing(charpol,F));
-                    if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
-//                        printf "Using a split prime in C2test. ";
-                        fac1 := facs[1,1];
-                        fac2 := facs[2,1];
-                        newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
-//                        if newnum ne 0 then printf "It has worked.\n"; end if;
-                        bignum := GCD(bignum,newnum);
-                        if bignum eq 1 then break; end if;
-                    end if;
+        for i := 1 to #factored_charpols do
+            p := factored_charpols[i,1];
+            facs := factored_charpols[i,2];
+            pfacs := primes_F[i];
+            if chi(pfacs[1]) ne 1 and chi(pfacs[2]) ne 1 then
+                if #facs eq 2 and Degree(facs[1,1]) eq 3 and Degree(facs[2,1]) eq 3 and facs[1,2] eq 1 and facs[2,2] eq 1 then
+//                    printf "Using a split prime in C2test. ";
+                    fac1 := facs[1,1];
+                    fac2 := facs[2,1];
+                    newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
+//                    if newnum ne 0 then printf "It has worked.\n"; end if;
+                    bignum := GCD(bignum,newnum);
+                    if bignum eq 1 then break; end if;
                 end if;
             end if;
         end for;

@@ -15,7 +15,7 @@ and the fourth one corresponds to the imprimitive type maximal subgroup.}
     possibly_C3image, possibly_C2image := C2andC3test(f : radical_cond := radical_cond, primes_bound := primes_bound, charpols := charpols);
 
     all_possibly_nonsurjprimes := Sort(Setseq(Seqset(badprimes cat [2,3,5,7] cat possibly_C1image cat possibly_C3image cat possibly_C2image)));
-    printf "Primes of bad reduction: %o\n\nReducible image possibly at: %o\n\"Field-extension\" image possibly at: %o\nImprimitive image possibly at: %o\n\nAll possibly non-surjective primes: %o\n", badprimes, possibly_C1image, possibly_C3image, possibly_C2image, all_possibly_nonsurjprimes;
+//    printf "Primes of bad reduction: %o\n\nReducible image possibly at: %o\n\"Field-extension\" image possibly at: %o\nImprimitive image possibly at: %o\n\nAll possibly non-surjective primes: %o\n", badprimes, possibly_C1image, possibly_C3image, possibly_C2image, all_possibly_nonsurjprimes;
     return badprimes, [[2,3,5,7], possibly_C1image, possibly_C3image, possibly_C2image];
 //    return badprimes, all_possibly_nonsurjprimes;
 end intrinsic;
