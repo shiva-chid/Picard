@@ -10,7 +10,7 @@ and the fourth one corresponds to the imprimitive type maximal subgroup.}
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     badprimes := PrimeFactors(radical_cond);
 
-    charpols := getcharpols(f : radical_cond := radical_cond, primesend := primes_bound);
+    charpols := getcharpols(f : primesend := primes_bound);
     possibly_C1image := C1test(f : radical_cond := radical_cond, primes_bound := primes_bound, charpols := charpols);
     possibly_C3image, possibly_C2image := C2andC3test(f : radical_cond := radical_cond, primes_bound := primes_bound, charpols := charpols);
 

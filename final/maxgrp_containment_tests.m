@@ -52,14 +52,12 @@ Jacobian of the curve y^3=f, if p is a good prime}
 end intrinsic;
 */
 
-intrinsic getcharpols(f :: RngUPolElt : radical_cond := 1, primesstart := 3, primesend := 500) -> SeqEnum
+intrinsic getcharpols(f :: RngUPolElt : primesend := 500) -> SeqEnum
 {returns a sequence of tuples <p,charpol_p> where charpol_p is the characteristic polynomial 
 of Frobenius at p on the Tate module of the Jacobian of the curve y^3=f, and p ranges over 
-the good primes NthPrime(N) for all N within the given bounds. The optional parameter radical_cond
-should be some integer divisible by all the bad primes of the curve.}
+the good primes NthPrime(N) for all N within the given bounds.}
     f := suppressed_integer_quartic(f);
     P<x> := Parent(f);
-    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
     Lpols := [];
     N := Ceiling(Log(2,NthPrime(primesend)));
     Nstr := IntegerToString(N);
@@ -111,7 +109,7 @@ for various primes.}
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
-    if charpols eq [] then charpols := getcharpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
+    if charpols eq [] then charpols := getcharpols(f : primesend := primes_bound); end if;
     Bignum := 0;
     for pandcharpol in charpols do
         p := pandcharpol[1];
@@ -150,7 +148,7 @@ for various primes.}
     OF := RingOfIntegers(F);
     C3primes := [];
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
-    if charpols eq [] then charpols := getcharpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
+    if charpols eq [] then charpols := getcharpols(f : primesend := primes_bound); end if;
     charpols := [x : x in charpols | x[1] gt 3];
     factored_charpols := [(x[1] mod 3 eq 1) select <x[1],Factorisation(ChangeRing(x[2],F))> else <x[1],[]> : x in charpols];
     primes_F := [(x[1] mod 3 eq 1) select PrimeIdealsOverPrime(F,x[1]) else [x[1]*OF] : x in charpols];
@@ -160,12 +158,16 @@ for various primes.}
     gens_CHG := [CubicHeckeG.i : i in [1..#Generators(CubicHeckeG)]];
     RCl, pi := RayClassGroup(Modulus(CubicHeckeG));
     matrix_of_vals := [[gens_CHG[j](pi(RCl.i)) : i in [1..#Generators(RCl)]] : j in [1..#gens_CHG]];
-    genvals := [[[&*[(v[i] ne 0) select matrix_of_vals[j,i]^v[i] else 1 : i in [1..#v]] where v is Eltseq(x @@ pi) : x in p] : p in primes_F] : j in [1..#gens_CHG]];
+    assert {x^3 : x in &cat(matrix_of_vals)} eq {1};
+    genvals := [[[&*[(v[i] ne 0) select matrix_of_vals[j,i]^(v[i] mod 3) else 1 : i in [1..#v]] where v is Eltseq(x @@ pi) : x in p] : p in primes_F] : j in [1..#gens_CHG]];
     n := #gens_CHG;
     PV := ProjectiveSpace(GF(3),n-1);
     PVPoints := RationalPoints(PV);
+    possiblecubicchars := [];
     for v in PVPoints do
         bignum := 0;
+        chi := &*[(v[j] ne 0) select gens_CHG[j]^(Z!v[j]) else CubicHeckeG!1 : j in [1..n]];
+        boo := true;
         for i := 1 to #charpols do
             p := primes_F[i];
             charpol := charpols[i,2];
@@ -177,7 +179,7 @@ for various primes.}
                     newnum := Coefficient(charpol,5);
 //                    if newnum ne 0 then printf "Inert prime works.\n"; end if;
                     bignum := GCD(bignum,newnum);
-                    if bignum eq 1 then break; end if;
+                    if bignum eq 1 then boo := false; break; end if;
                 end if;
             elif #p eq 2 then
                 chivalatp1 := &*[(v[j] ne 0) select genvals[j,i,1]^(Z!v[j]) else 1 : j in [1..n]];
@@ -190,14 +192,22 @@ for various primes.}
                         newnum := Z ! (Coefficient(fac1,2)*Coefficient(fac2,2));
 //                        if newnum ne 0 then printf "Split prime works.\n"; end if;
                         bignum := GCD(bignum,newnum);
-                        if bignum eq 1 then break; end if;
+                        if bignum eq 1 then boo := false; break; end if;
                     end if;
                 end if;
             end if;
         end for;
         require bignum ne 0 : "C3test fails.";
-        C3primes := Sort(SetToSequence(Set(C3primes cat PrimeFactors(bignum))));
+        if boo then
+            pfacsbignum := PrimeFactors(bignum);
+            Append(~possiblecubicchars,<pfacsbignum,chi>);
+            C3primes := Sort(SetToSequence(Set(C3primes cat pfacsbignum)));
+        end if;
     end for;
+    n := Nresults();
+    if n eq 2 then
+        return Exclude(C3primes,3), possiblecubicchars;
+    end if;
     return Exclude(C3primes,3);
 end intrinsic;
 
@@ -222,9 +232,9 @@ for various primes.}
     F := CyclotomicField(3);
     OF := RingOfIntegers(F);
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
-    if charpols eq [] then charpols := getcharpols(f : radical_cond := radical_cond, primesend := primes_bound); end if;
+    if charpols eq [] then charpols := getcharpols(f : primesend := primes_bound); end if;
     try
-        C3primes := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound, charpols := charpols);
+        C3primes, possiblecubicchars := C3test(f : radical_cond := radical_cond, primes_bound := primes_bound, charpols := charpols);
     catch e;
         C3primes := [];
         require C3primes ne [] : "C3test fails.";
@@ -234,8 +244,10 @@ for various primes.}
     factored_charpols := [<x[1],Factorisation(ChangeRing(x[2],F))> : x in charpols | x[1] mod 3 eq 1];
     primes_F := [PrimeIdealsOverPrime(F,x[1]) : x in factored_charpols];
     quaddirichletchars := quad_fields(radical_cond);
+    possiblequadchars := [];
     for chi in quaddirichletchars do
         bignum := 0;
+        boo := true;
         for i := 1 to #factored_charpols do
             p := factored_charpols[i,1];
             facs := factored_charpols[i,2];
@@ -248,13 +260,21 @@ for various primes.}
                     newnum := Z ! ((Coefficient(fac1,2)*Coefficient(fac1,1)-Coefficient(fac1,0))*(Coefficient(fac2,2)*Coefficient(fac2,1)-Coefficient(fac2,0)));
 //                    if newnum ne 0 then printf "It has worked.\n"; end if;
                     bignum := GCD(bignum,newnum);
-                    if bignum eq 1 then break; end if;
+                    if bignum eq 1 then boo := false; break; end if;
                 end if;
             end if;
         end for;
         require bignum ne 0 : "C2test fails.";
-        C2primes := Sort(SetToSequence(Set(C2primes cat PrimeFactors(bignum))));
+        if boo then
+            pfacsbignum := PrimeFactors(bignum);
+            Append(~possiblequadchars,<pfacsbignum,chi>);
+            C2primes := Sort(SetToSequence(Set(C2primes cat pfacsbignum)));
+        end if;
     end for;
+    n := Nresults();
+    if n eq 4 then
+        return C3primes, Exclude(C2primes,3), possiblecubicchars, possiblequadchars;
+    end if;
     return C3primes, Exclude(C2primes,3);
 end intrinsic;
 
