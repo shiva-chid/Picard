@@ -72,6 +72,30 @@ the good primes NthPrime(N) for all N within the given bounds.}
 end intrinsic;
 
 
+intrinsic get_faccharpols_overQzeta3(f :: RngUPolElt : primesend := 500) -> SeqEnum
+{returns a sequence of tuples <p,faccharpol_p> where faccharpol_p is the factorisation over Q(zeta_3) 
+of the characteristic polynomial of Frobenius at p on the Tate module of the Jacobian of the curve y^3=f, 
+and p ranges over the good primes NthPrime(N) for all N within the given bounds.}
+    f := suppressed_integer_quartic(f);
+    P<x> := Parent(f);
+    Lpols := [];
+    N := Ceiling(Log(2,NthPrime(primesend)));
+    Nstr := IntegerToString(N);
+    fstr := &cat(Split(Sprint(f)," "));
+    C := Coefficients(f)[1..3];
+    hwlpolys_standard_message := Pipe("hwlpolys y^3=" cat fstr cat " " cat Nstr cat " 1 0 -1 0 " cat fstr cat ".txt","");
+    fil := Open(fstr cat ".txt", "r");
+    Lpols := liftLpolys(fil,C);
+    delete_file := Pipe("rm " cat fstr cat ".txt","");
+    charpols := [<x[1],P!Reverse(x[2])> : x in Lpols];
+
+    F := CyclotomicField(3);
+    OF := RingOfIntegers(F);
+    fac_charpols := [<x[1],(x[1] mod 3 eq 1) select Factorisation(ChangeRing(x[2],OF)) else Factorisation(ChangeRing(Bracket(2,x[2]),OF))> : x in charpols];
+    return fac_charpols;
+end intrinsic;
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -153,7 +177,7 @@ for various primes.}
     factored_charpols := [(x[1] mod 3 eq 1) select <x[1],Factorisation(ChangeRing(x[2],F))> else <x[1],[]> : x in charpols];
     primes_F := [(x[1] mod 3 eq 1) select PrimeIdealsOverPrime(F,x[1]) else [x[1]*OF] : x in charpols];
 
-    CubicHeckeG := cubic_fields(radical_cond : noduplicates := false);
+    CubicHeckeG := cubic_fields(radical_cond);
 //    print #CubicHeckeG;
     gens_CHG := [CubicHeckeG.i : i in [1..#Generators(CubicHeckeG)]];
     RCl, pi := RayClassGroup(Modulus(CubicHeckeG));
@@ -212,6 +236,130 @@ for various primes.}
 end intrinsic;
 
 
+intrinsic C3test2(f :: RngUPolElt : radical_cond := 1, primes_bound := 500, charpols := []) -> SeqEnum
+{Given a monic suppressed integral quartic polynomial f = x^4 + a x^2 + b x + c, returns a list of
+primes which contains all primes ell at which the mod-ell Galois image associated to the Jacobian of
+the curve y^3 = f, is contained in the C3-type maximal subgroup of GL(3,F_ell), i.e., the field-extension
+type maximal subgroup. The optional parameters are
+1. some integer divisible by all the bad primes of the curve.
+2. a bound for how many primes to consider.
+3. a precomputed list of tuples consisting of a prime p and the characteristic polynomial of Frobenius at p,
+for various primes.}
+    Z := Integers();
+    P<t> := PolynomialRing(Z);
+    F<zeta3> := CyclotomicField(3);
+    OF := RingOfIntegers(F);
+    C3primes := [];
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if charpols eq [] then charpols := getcharpols(f : primesend := primes_bound); end if;
+    charpols := [x : x in charpols | x[1] gt 3];
+
+    CubicHeckeG := cubic_fields(radical_cond);
+    n := #Generators(CubicHeckeG);
+    gens_CHG := [CubicHeckeG.i : i in [1..n]];
+    RCl, pi := RayClassGroup(Modulus(CubicHeckeG));
+    matrix_of_vals := [[gens_CHG[j](pi(RCl.i)) : i in [1..#Generators(RCl)]] : j in [1..#gens_CHG]];
+    assert {x^3 : x in &cat(matrix_of_vals)} eq {1};
+
+    function mu3toZmod3(zeta);
+        if zeta eq 1 then
+            return 0;
+        elif zeta eq zeta3 then
+            return 1;
+        else
+            assert zeta eq zeta3^2;
+            return 2;
+        end if;
+    end function;
+
+/*
+    factored_charpols := [(x[1] mod 3 eq 1) select <x[1],Factorisation(ChangeRing(x[2],F))> else <x[1],Factorisation(ChangeRing(Bracket(2,x[2]),F))> : x in charpols];
+    primes_F := [(x[1] mod 3 eq 1) select PrimeIdealsOverPrime(F,x[1]) else [x[1]*OF] : x in charpols];
+    genvals := [[[mu3toZmod3(&*[(v[i] ne 0) select matrix_of_vals[j,i]^(v[i] mod 3) else 1 : i in [1..#v]]) : j in [1..n]] where v is Eltseq(x @@ pi) : x in p] : p in primes_F];
+*/
+    aps := [];
+    mat := Matrix(GF(3),n,1,[0 : i in [1..n]]);
+    possible_ells_found := false;
+    for i := 1 to #charpols do
+        p := charpols[i,1];
+        ap := Coefficient(charpols[i,2],5);
+        bp := Coefficient(charpols[i,2],4);
+        if p mod 3 eq 1 then
+            if ap eq 0 then continue; end if;
+            fac_charpol := Factorisation(ChangeRing(charpols[i,2],F));
+            pabove := PrimeIdealsOverPrime(F,p);
+        elif p mod 3 eq 2 then
+            if ap^2-2*bp eq 0 then continue; end if;
+//            fac_charpol := Factorisation(ChangeRing(Bracket(2,charpols[i,2]),F));
+            charpol_in_tsq := P![Coefficient(charpols[i,2],2*j) : j in [0..3]];
+            assert Evaluate(charpol_in_tsq,t^2) eq charpols[i,2];
+            fac_charpol := [<charpol_in_tsq,1>,<charpol_in_tsq,1>];
+            pabove := [p*OF];
+        end if;
+//        printf "Prime = %o, Lpol Factorisation type = %o\n", p, [<Degree(x[1]),x[2]> : x in fac_charpol];
+        if #fac_charpol eq 2 and Degree(fac_charpol[1,1]) eq 3 and Degree(fac_charpol[2,1]) eq 3 then
+            ap1 := Coefficient(fac_charpol[1,1],2);
+            if ap1 eq 0 then continue; end if;
+            if p mod 3 eq 1 then
+                Append(~aps,ap);
+            elif p mod 3 eq 2 then
+                Append(~aps,ap^2-2*bp);
+            end if;
+            nm_ap1 := Z!Norm(ap1);
+            Append(~aps,nm_ap1);
+            cols := [[mu3toZmod3(&*[(v[i] mod 3 ne 0) select matrix_of_vals[j,i]^(v[i] mod 3) else 1 : i in [1..#v]]) : j in [1..n]] where v is Eltseq(x @@ pi) : x in pabove];
+            for col in cols do
+                mat := HorizontalJoin(mat,Matrix(GF(3),n,1,col));
+            end for;
+            kermat := Kernel(mat);
+            dimkermat := Dimension(kermat);
+//            printf "Size of the matrix is %ox%o and row kernel has dimension %o\n", NumberOfRows(mat), NumberOfColumns(mat), dimkermat;
+            if dimkermat eq 0 then
+                lcm_aps := LCM(aps);
+                require lcm_aps ne 0 : "C3test fails.";
+                possible_ells := Exclude(PrimeFactors(lcm_aps),3);
+//                printf "Possible ells after first level in C3test2: %o\n", possible_ells;
+//                return possible_ells;
+                break;
+            end if;
+        end if;
+    end for;
+
+    for i := 1 to #charpols do
+        p := charpols[i,1];
+        if p mod 3 eq 1 then
+            fac_charpol := Factorisation(ChangeRing(charpols[i,2],F));
+        elif p mod 3 eq 2 then
+            fac_charpol := Factorisation(ChangeRing(Bracket(2,charpols[i,2]),F));
+        end if;
+        if #fac_charpol eq 2 and Degree(fac_charpol[1,1]) eq 3 and Degree(fac_charpol[2,1]) eq 3 then
+            ap := Coefficient(fac_charpol[1,1],2);
+            ap := Z!Norm(ap);
+            disc_charpolp := Discriminant(fac_charpol[1,1]);
+            for ell in possible_ells do
+                if ell mod 3 eq 1 then
+                    ellabove := PrimeIdealsOverPrime(F,ell);
+                    OFmodell1, resmodell1 := ResidueClassField(OF,ellabove[1]);
+                    OFmodell2, resmodell2 := ResidueClassField(OF,ellabove[2]);
+                    if ap mod ell ne 0 and not IsSquare(resmodell1(disc_charpolp)) and not IsSquare(resmodell2(disc_charpolp)) then
+                        Exclude(~possible_ells,ell);
+                    end if;
+                elif ell mod 3 eq 2 then
+                    ellabove := ell*OF;
+                    OFmodell, resmodell := ResidueClassField(OF,ellabove);
+                    if ap mod ell ne 0 and not IsSquare(resmodell(disc_charpolp)) then
+                        Exclude(~possible_ells,ell);
+                    end if;
+                end if;
+            end for;
+            if possible_ells eq [] then
+                break;
+            end if;
+        end if;
+    end for;
+    return possible_ells;
+end intrinsic;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -219,10 +367,10 @@ end intrinsic;
 intrinsic C2andC3test(f :: RngUPolElt : radical_cond := 1, primes_bound := 500, charpols := []) -> SeqEnum, SeqEnum
 {Given a monic suppressed integral quartic polynomial f = x^4 + a x^2 + b x + c, returns two lists of primes.
 1. The first list contains all primes ell at which the mod-ell Galois image associated to the Jacobian of
-the curve y^3 = f, is contained in the C3-type maximal subgroup of GL(3,F_ell), i.e., the field-extension
+the curve y^3 = f, is contained in the C3-type maximal subgroup of GL(3,F_ell) or GU(3,F_ell), i.e., the field-extension
 type maximal subgroup.
 2. The second list contains all primes ell at which the mod-ell Galois image is contained in the C2-type maximal 
-subgroup of GL(3,F_ell), i.e., the imprimitive type maximal subgroup.
+subgroup of GL(3,F_ell) or GU(3,F_ell), i.e., the imprimitive type maximal subgroup.
 The optional parameters are
 1. some integer divisible by all the bad primes of the curve.
 2. a bound for how many primes to consider.
@@ -243,7 +391,7 @@ for various primes.}
     C2primes := C3primes;
     factored_charpols := [<x[1],Factorisation(ChangeRing(x[2],F))> : x in charpols | x[1] mod 3 eq 1];
     primes_F := [PrimeIdealsOverPrime(F,x[1]) : x in factored_charpols];
-    quaddirichletchars := quad_fields(radical_cond);
+    quaddirichletchars := quad_fields(radical_cond : all := false);
     possiblequadchars := [];
     for chi in quaddirichletchars do
         bignum := 0;
@@ -278,3 +426,127 @@ for various primes.}
     return C3primes, Exclude(C2primes,3);
 end intrinsic;
 
+
+intrinsic C2andC3test2(f :: RngUPolElt : radical_cond := 1, primes_bound := 500, charpols := []) -> SeqEnum, SeqEnum
+{Given a monic suppressed integral quartic polynomial f = x^4 + a x^2 + b x + c, returns two lists of primes.
+1. The first list contains all primes ell at which the mod-ell Galois image associated to the Jacobian of
+the curve y^3 = f, is contained in the C3-type maximal subgroup of GL(3,F_ell) or GU(3,F_ell), i.e., the field-extension
+type maximal subgroup.
+2. The second list contains all primes ell at which the mod-ell Galois image is contained in the C2-type maximal 
+subgroup of GL(3,F_ell) or GU(3,F_ell), i.e., the imprimitive type maximal subgroup.
+The optional parameters are
+1. some integer divisible by all the bad primes of the curve.
+2. a bound for how many primes to consider.
+3. a precomputed list of tuples consisting of a prime p and the characteristic polynomial of Frobenius at p,
+for various primes.}
+    Z := Integers();
+    P<t> := PolynomialRing(Z);
+    F<zeta3> := CyclotomicField(3);
+    OF := RingOfIntegers(F);
+    if radical_cond eq 1 then radical_cond := RadCond(f); end if;
+    if charpols eq [] then charpols := getcharpols(f : primesend := primes_bound); end if;
+    charpols := [x : x in charpols | x[1] gt 3];
+    try
+        C3primes := C3test2(f : radical_cond := radical_cond, primes_bound := primes_bound, charpols := charpols);
+    catch e;
+        C3primes := [];
+        require C3primes ne [] : "C3test fails.";
+    end try;
+
+
+    QuadHeckeG := quad_fields(radical_cond);
+    n := #Generators(QuadHeckeG);
+    gens_QHG := [QuadHeckeG.i : i in [1..n]];
+    RCl, pi := RayClassGroup(Modulus(QuadHeckeG));
+    matrix_of_vals := [[gens_QHG[j](pi(RCl.i)) : i in [1..#Generators(RCl)]] : j in [1..#gens_QHG]];
+    assert {x^2 : x in &cat(matrix_of_vals)} eq {1};
+
+    function mu2toZmod2(zeta);
+        if zeta eq 1 then
+            return 0;
+        elif zeta eq -1 then
+            return 1;
+        end if;
+    end function;
+
+
+    list_of_vals := [];
+    mat := Matrix(GF(2),n,1,[0 : i in [1..n]]);
+    possible_ells_found := false;
+    for i := 1 to #charpols do
+        p := charpols[i,1];
+        if p mod 3 eq 1 then
+            fac_charpol := Factorisation(ChangeRing(charpols[i,2],F));
+            pabove := PrimeIdealsOverPrime(F,p);
+        elif p mod 3 eq 2 then
+//            fac_charpol := Factorisation(ChangeRing(Bracket(2,charpols[i,2]),F));
+            charpol_in_tsq := P![Coefficient(charpols[i,2],2*j) : j in [0..3]];
+            assert Evaluate(charpol_in_tsq,t^2) eq charpols[i,2];
+            fac_charpol := [<charpol_in_tsq,1>,<charpol_in_tsq,1>];
+            pabove := [p*OF];
+        end if;
+//        printf "Prime = %o, Lpol Factorisation type = %o\n", p, [<Degree(x[1]),x[2]> : x in fac_charpol];
+        if #fac_charpol eq 2 and Degree(fac_charpol[1,1]) eq 3 and Degree(fac_charpol[2,1]) eq 3 then
+            ap := Coefficient(fac_charpol[1,1],2);
+            bp := Coefficient(fac_charpol[1,1],1);
+            cp := Coefficient(fac_charpol[1,1],0);
+            valp := ap*bp-cp;
+            if valp eq 0 then continue; end if;
+            valp := Z!Norm(valp);
+            Append(~list_of_vals,valp);
+            cols := [[mu2toZmod2(&*[(v[i] mod 2 ne 0) select matrix_of_vals[j,i]^(v[i] mod 2) else 1 : i in [1..#v]]) : j in [1..n]] where v is Eltseq(x @@ pi) : x in pabove];
+            for col in cols do
+                mat := HorizontalJoin(mat,Matrix(GF(2),n,1,col));
+            end for;
+            kermat := Kernel(mat);
+            dimkermat := Dimension(kermat);
+//            printf "Size of the matrix is %ox%o and row kernel has dimension %o\n", NumberOfRows(mat), NumberOfColumns(mat), dimkermat;
+            if dimkermat eq 0 then
+                lcm_vals := LCM(list_of_vals);
+                require lcm_vals ne 0 : "C2test fails.";
+                possible_ells := Exclude(PrimeFactors(lcm_vals),3);
+//                printf "Possible ells after first level in C2test2: %o\n", possible_ells;
+//                return possible_ells;
+                break;
+            end if;
+        end if;
+    end for;
+
+
+    for i := 1 to #charpols do
+        p := charpols[i,1];
+        if p mod 3 eq 1 then
+            fac_charpol := Factorisation(ChangeRing(charpols[i,2],OF));
+        elif p mod 3 eq 2 then
+            fac_charpol := Factorisation(ChangeRing(Bracket(2,charpols[i,2]),OF));
+        end if;
+        if #fac_charpol eq 2 and Degree(fac_charpol[1,1]) eq 3 and Degree(fac_charpol[2,1]) eq 3 then
+            ap := Coefficient(fac_charpol[1,1],2);
+            bp := Coefficient(fac_charpol[1,1],1);
+            cp := Coefficient(fac_charpol[1,1],0);
+            valp := ap*bp-cp;
+            valp := Z!Norm(valp);
+            ap := Z!Norm(ap);
+            for ell in possible_ells do
+                if ell mod 3 eq 1 then
+                    ellabove := PrimeIdealsOverPrime(F,ell);
+                    OFmodell1, resmodell1 := ResidueClassField(OF,ellabove[1]);
+                    OFmodell2, resmodell2 := ResidueClassField(OF,ellabove[2]);
+                    if valp mod ell ne 0 and ap mod ell ne 0 and #Factorisation(Polynomial([resmodell1(c) : c in Coefficients(fac_charpol[1,1])])) ne 3 and #Factorisation(Polynomial([resmodell2(c) : c in Coefficients(fac_charpol[1,1])])) ne 3 then
+                        Exclude(~possible_ells,ell);
+                    end if;
+                elif ell mod 3 eq 2 then
+                    ellabove := ell*OF;
+                    OFmodell, resmodell := ResidueClassField(OF,ellabove);
+                    if valp mod ell ne 0 and ap mod ell ne 0 and #Factorisation(Polynomial([resmodell(c) : c in Coefficients(fac_charpol[1,1])])) ne 3 then
+                        Exclude(~possible_ells,ell);
+                    end if;
+                end if;
+            end for;
+            if possible_ells eq [] then
+                return C3primes, C3primes;
+            end if;
+        end if;
+    end for;
+    return C3primes, Sort(SetToSequence(Set(C3primes cat possible_ells)));
+end intrinsic;
