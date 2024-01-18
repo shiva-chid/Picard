@@ -30,24 +30,35 @@ if Dimension(endomorphism_algebra(f)) ne 2 then
 end if;
 */
 
+SetColumns(0);
 try
     badprimes, nonsurjprimes := possibly_nonsurj_primes(f);
     assert cond eq &*[p^Valuation(cond,p) : p in badprimes];
     result := <Coefficients(f), <nonsurjprimes[2], nonsurjprimes[3], nonsurjprimes[4]>>;
-    PrintFile("nonsurjprimes_results_cleanedupDrewDatabase2.txt", Sprint(result) cat ",");
+    PrintFile("nonsurjprimes_results_cleanedupDrewDatabase3.txt", Sprint(result) cat ",");
 catch e;
 //    badprimes := PrimeFactors(RadCond(f));
     error_for := <Coefficients(f)>;
-    PrintFile("error_in_possibly_nonsurj_primes_cleanedupDrewDatabase2.txt", error_for);
+    PrintFile("error_in_possibly_nonsurj_primes_cleanedupDrewDatabase3.txt", error_for);
 end try;
 
 exit;
 
-// cat pic_7smooth_cleanup2.txt | time parallel -j 128 magma input_string:={} parallel_run_cleanedupDrewDatabase.m
-
+// cat pic_7smooth_cleanup2.txt | time parallel -j 64 magma input_string:={} parallel_run_cleanedupDrewDatabase.m
 
 /*
-fil := Open("nonsurjprimes_results_cleanedupDrewDatabase.txt","r");
+2350890.14user 123064.88system 9:04:45elapsed 7568%CPU (0avgtext+0avgdata 44728maxresident)k
+0inputs+499184768outputs (0major+29993793228minor)pagefaults 0swaps
+*/
+
+/*
+with -j 64
+3218331.59user 140064.59system 30:10:00elapsed 3092%CPU (0avgtext+0avgdata 45036maxresident)k
+8inputs+647621536outputs (0major+29552306238minor)pagefaults 0swaps
+*/
+
+/*
+fil := Open("nonsurjprimes_results_cleanedupDrewDatabase2.txt","r");
 s := Gets(fil);
 curves := [];
 results := [];
@@ -78,6 +89,17 @@ end for;
 [[ 2, 3, 13 ][][]] : Multiplicity 5
 [[ 2, 3 ][][]] : Multiplicity 1889104
 [[ 2, 3 ][][ 2 ]] : Multiplicity 469588
+
+
+[[ 2, 3, 5 ][][ 5 ]] : Multiplicity 5
+[[ 2, 3, 5 ][][ 2, 5 ]] : Multiplicity 274
+[[ 2, 3 ][ 2 ][ 2 ]] : Multiplicity 93075
+[[ 2, 3, 7 ][][ 2, 7 ]] : Multiplicity 349
+[[ 2, 3, 13 ][][ 2, 13 ]] : Multiplicity 5
+[[ 2, 3, 7 ][ 2 ][ 2, 7 ]] : Multiplicity 32
+[[ 2, 3 ][][]] : Multiplicity 5072
+[[ 2, 3 ][][ 2 ]] : Multiplicity 2314361
+
 
 inds := [i : i in [1..#results] | results[i,3] ne [] and results[i,3] ne [2]]; #inds;
 // 157
