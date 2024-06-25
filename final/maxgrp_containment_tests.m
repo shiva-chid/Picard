@@ -125,7 +125,7 @@ the good primes NthPrime(N) for all N within the given bounds.}
     Nstr := IntegerToString(N);
     fstr := &cat(Split(Sprint(f)," *"));
     filename := Sprintf("temp_%o", Getpid());
-    System("hwlpolys y^3=" cat fstr cat " " cat Nstr cat " 1 0 -1 0 " cat filename);
+    _ := System("hwlpolys y^3=" cat fstr cat " " cat Nstr cat " 1 0 -1 0 " cat filename);
     fil := Open(filename, "r");
     C := Coefficients(f)[1..3];
     Lpols := liftLpolys(fil,C);
@@ -195,7 +195,7 @@ and p ranges over the good primes NthPrime(N) for all N within the given bounds.
     fstr := " \"" cat Sprint(f) cat "\"";
     filename := Sprintf("temp_%o", Getpid());
     cmd := "lpdata3 " cat filename cat fstr cat primebounds cat " 1";
-    System(cmd);
+    _ := System(cmd);
     newfilename := filename cat "_lpdata.txt";
     fil := Open(newfilename, "r");
     s := Gets(fil);
