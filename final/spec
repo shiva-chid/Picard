@@ -3,4 +3,5 @@
   Lpolys.m
   maxgrp_containment_tests.m
   quad_cubic_fields.m
+  find_onedimchar.m
 }
