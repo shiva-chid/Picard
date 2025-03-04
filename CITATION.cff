@@ -1,0 +1,27 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Mod-ellImagePicard
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Shiva
+    family-names: Chidambaram
+    email: p.shivachidambaram@gmail.com
+    affiliation: University of Wisconsin-Madison
+    orcid: 'https://orcid.org/0000-0001-7325-6363'
+  - given-names: Pip
+    family-names: Goodman
+    email: p.goodman@uni-bayreuth.de
+    affiliation: University of Bayreuth
+    orcid: 'https://orcid.org/0000-0001-6735-2367'
+repository-code: 'https://github.com/shiva-chid/Picard'
+abstract: >-
+  Computes non-maximal primes for mod-ell Galois
+  representations of Picard curves, and more generally genus
+  3 Jacobians with imaginary quadratic endomorphism algebra,
+  and the Galois images for these non-maximal primes.
+license: MIT
