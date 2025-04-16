@@ -1,12 +1,12 @@
-intrinsic find_onedimchar(f :: RngUPolElt, ell :: RngIntElt : radical_cond := 1, primes_bound := 500, charpols := [], ramified := false, useinertFrobsq := false, uselambdacharpols := false, noskip := true, Hecke_stricteval := true) -> SeqEnum, SeqEnum
-{returns list of possible characters of the Galois group of K=Q(zeta_3) that can
+intrinsic find_onedimchar(f :: RngUPolElt, ell :: RngIntElt : radical_cond := 1, primes_bound := 400, charpols := [], unramified := true, useinertFrobsq := true, Hecke_stricteval := false, uselambdacharpols := false) -> SeqEnum, SeqEnum
+{returns list of characters of the Galois group of K=Q(zeta_3) that can
 possibly occur in the mod-ell Galois representation of the Jacobian of the curve y^3 = f(x).}
     SetColumns(0);
     Z := Integers();
     P_ell<T> := PolynomialRing(GF(ell));
     f := suppressed_integer_quartic(f);
     if radical_cond eq 1 then radical_cond := RadCond(f); end if;
-    if ramified then
+    if not unramified then
         radical_cond := (radical_cond mod ell eq 0) select radical_cond else ell*radical_cond;
     end if;
     cond := radical_cond^4;
@@ -37,18 +37,20 @@ possibly occur in the mod-ell Galois representation of the Jacobian of the curve
     if charpols eq [] then
         charpols := getcharpols(f : primesend := primes_bound);
     end if;
-//    print [x[1] : x in charpols];
+    printf "Charpols found at primes:\n%o\n", [x[1] : x in charpols];
     if useinertFrobsq then
         // using Bracket-2 of charpols at inert primes.
         charpols := [(x[1] mod 3 eq 1) select x else <x[1],Bracket(2,x[2])> : x in charpols | x[1] ne 3 and x[1] ne ell];
     else
         charpols := [x : x in charpols | x[1] mod 3 eq 1 and x[1] ne ell];
     end if;
-//    print [x[1] : x in charpols];
-    if not ramified then
+    printf "Throwing away ell, and possibly inert primes. Retained:\n%o\n", [x[1] : x in charpols];
+/*
+    if unramified then
         charpols := [x : x in charpols | x[1] mod ell eq 1];
     end if;
-//    print [x[1] : x in charpols];
+    printf "if looking for the unramified-at-ell character, only retaining primes = 1 mod ell\n%o\n", [x[1] : x in charpols];
+*/
     if uselambdacharpols cmpne false then
         resF1_pol := hom<P_F->P_ell|resF1,T>;
         charpolsfacs := [<x[1],Factorisation(ChangeRing(x[2],OF))> : x in charpols];
@@ -69,7 +71,7 @@ possibly occur in the mod-ell Galois representation of the Jacobian of the curve
     printf "\nUsing L-polynomials at the (ordinary) primes\n%o\n\n", primes;
 //    print charpolsmodell;
 
-    gens_G := SetToSequence(Generators(G));
+    gens_G := Setseq(Generators(G));
     n := #gens_G;
     exps_G := [Order(chi) : chi in gens_G];
     conds_G := [Conductor(chi) : chi in gens_G];
@@ -109,14 +111,11 @@ it's enough to test only chi or chi^-1.
 //        Xnew := [x : x in X | resmodell((&*[(gens_G[i])^(x[i]) : i in [1..n]])(pabove[1])) in eigvals_rhoell_frobp];
 //        Xnew := [x : x in X | resmodell((&*[(gens_G[i])^(x[i]) : i in [1..n]])(pabove[1])) in eigvals_rhoell_frobp or resmodell((&*[(gens_G[i])^(x[i]) : i in [1..n]])(pabove[2])) in eigvals_rhoell_frobp];
         if Hecke_stricteval then
-            Xnew := [x : x in X | &*[gens_evalsatpabove[1][i]^(x[i]) : i in [1..n]] in eigvals_rhoell_frobp];
+            X := [x : x in X | &*[gens_evalsatpabove[1][i]^(x[i]) : i in [1..n]] in eigvals_rhoell_frobp];
         else
-            Xnew := [x : x in X | &or[&*[gens_evalsatfrakp[i]^(x[i]) : i in [1..n]] in eigvals_rhoell_frobp : gens_evalsatfrakp in gens_evalsatpabove]];
+            X := [x : x in X | &or[&*[gens_evalsatfrakp[i]^(x[i]) : i in [1..n]] in eigvals_rhoell_frobp : gens_evalsatfrakp in gens_evalsatpabove]];
         end if;
-        if noskip or Xnew ne [] then
-            X := Xnew;
-            number_linearfacs := Minimum(number_linearfacs,&+([] cat [r[2] : r in roots_charpol]));
-        end if;
+        number_linearfacs := Minimum(number_linearfacs,&+([] cat [r[2] : r in roots_charpol]));
         print p, #X;
         ind := ind+1;
     end while;
